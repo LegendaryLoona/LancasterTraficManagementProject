@@ -76,8 +76,12 @@ WSGI_APPLICATION = 'CarProject.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',    # Replace with your database name
+        'USER': 'postgres',   # Replace with your database user
+        'PASSWORD': '1', # Replace with your database password
+        'HOST': '127.0.0.1',  # Use '127.0.0.1' for local connections or your server IP
+        'PORT': '5432',       # Default PostgreSQL port
     }
 }
 
