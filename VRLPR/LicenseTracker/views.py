@@ -13,10 +13,23 @@ def view_person_info(request):
 
     return JsonResponse(data, safe=False)
 def view_cars(request):
-    id = request.GET.get('id')
-    junction = Junktion.objects.filter(id=id)[0]
-    data = f'Status: {junction.how_busy()}; Cars: {junction.get_cars()}'
-    return JsonResponse(data, safe=False)
+    junction_id = request.GET.get('id')
+    if not junction_id:
+        return JsonResponse( "Junction ID is required", safe=False)
+    try:
+        junction = Junktion.objects.get(id=junction_id) 
+    except Junktion.DoesNotExist:
+        return JsonResponse({"error": f"Junction ID {junction_id} not found."}, safe=False)
+    cars = Car.objects.filter(junction=junction).values("number", "manufacturer", "model", "color")
+    return JsonResponse({
+        "junction": {
+            "id": junction.id,
+            "address": junction.address,
+            "max_traffic": junction.max_traffic,
+            "traffic_status": junction.how_busy()
+        },
+        "cars": list(cars)  
+    }, safe=False)
 
 # http://127.0.0.1:8000/cars/create_person/?name=ja&birth_date=1990-01-01&address=beijing
 def create_person(request):
