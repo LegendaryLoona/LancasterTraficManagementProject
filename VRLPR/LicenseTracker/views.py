@@ -1,8 +1,12 @@
-from django.shortcuts import render
 from .models import Person, License, Car, Junktion
 from django.http import JsonResponse
 from datetime import datetime
 from django.db import transaction
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.decorators import login_required
+from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
+from django.http import HttpResponseForbidden
 
 def view_person_info(request):
     id = request.GET.get('id')
@@ -12,6 +16,7 @@ def view_person_info(request):
     data = f"Name = {person.name}, birth date = {person.birth_date}, license = {person.license.number}, cars = {person.owned_cars()}"
 
     return JsonResponse(data, safe=False)
+
 def view_cars(request):
     junction_id = request.GET.get('id')
     if not junction_id:
@@ -462,3 +467,125 @@ def delete_junktion(request):
             return JsonResponse({ "message": f"Junktion ID={junktion_id} does not exist"}, safe=False)
         except Exception as e:
             return JsonResponse({"message": f"Deletion failed: {e}"}, safe=False)
+        
+def register_view(request):
+
+    if request.method == "POST":
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()  
+            Person.objects.create(user=user, name=user.username)
+            login(request, user)
+            return redirect("profile") 
+    else:
+        form = UserRegisterForm()
+    return render(request, "register.html", {"form": form})
+
+def login_view(request):
+
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect("profile")
+        else:
+            return render(request, "login.html", {"error": "username or password is incorrect"})
+    return render(request, "login.html")
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return redirect("login")
+
+@login_required
+def profile_view(request):
+    person, created = Person.objects.get_or_create(
+        user=request.user,
+        defaults={
+            "name": request.user.username, 
+        },
+    )
+    if request.method == "POST":
+        form = PersonForm(request.POST, instance=person)
+        if form.is_valid():
+            form.save()
+            return redirect("profile")
+    else:
+        form = PersonForm(instance=person)
+    return render(request, "profile.html", {"form": form})
+
+@login_required
+def license_view(request):
+
+    person = get_object_or_404(Person, user=request.user)
+    try:
+        user_license = person.license
+    except License.DoesNotExist:
+        user_license = None
+
+    if request.method == "POST":
+        form = LicenseForm(request.POST, instance=user_license)
+        if form.is_valid():
+            license_obj = form.save(commit=False)
+            license_obj.person = person 
+            license_obj.save()
+            return redirect("profile")
+    else:
+        form = LicenseForm(instance=user_license)
+
+    return render(request, "license_form.html", {"form": form})
+
+@login_required
+def car_add_view(request):
+    person = get_object_or_404(Person, user=request.user)
+    if request.method == "POST":
+        form = CarForm(request.POST)
+        if form.is_valid():
+            car = form.save(commit=False)
+            car.owner = person
+            car.save()
+            return redirect("car_list")
+    else:
+        form = CarForm()
+    return render(request, "car_form.html", {"form": form})
+
+@login_required
+def car_edit_view(request, car_id):
+    person = get_object_or_404(Person, user=request.user)
+    car = get_object_or_404(Car, id=car_id)
+
+    if car.owner != person:
+        return HttpResponseForbidden("You are not allowed to do this")
+    if request.method == "POST":
+        form = CarForm(request.POST, instance=car)
+        if form.is_valid():
+            form.save()
+            return redirect("car_list")
+    else:
+        form = CarForm(instance=car)
+
+    return render(request, "car_form.html", {"form": form, "edit_mode": True})
+
+
+@login_required
+def car_delete_view(request, car_id):
+    person = get_object_or_404(Person, user=request.user)
+    car = get_object_or_404(Car, id=car_id)
+
+    if car.owner != person:
+        return HttpResponseForbidden("You are not allowed to do this")
+    if request.method == "POST":
+        car.delete()
+        return redirect("car_list")
+    return render(request, "car_confirm_delete.html", {"car": car})
+
+@login_required
+def car_list_view(request):
+    person = get_object_or_404(Person, user=request.user)
+    cars = person.cars.all()
+    return render(request, "car_list.html", {"cars": cars})
+
+def index(request):
+    return render(request, 'index.html')
