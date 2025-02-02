@@ -29,5 +29,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     path("persons/", views.all_persons, name="car_list"),
     path("licenses/", views.all_licenses, name="car_list"),
-    path("cars/", views.all_cars, name="car_list"),
+    path("cars/", views.all_cars, name="car_list1"),
     ]
