@@ -27,4 +27,7 @@ urlpatterns = [
     path("car/<int:car_id>/delete/", views.car_delete_view, name="car_delete"),
     # path('carss/', include('LicenseTracker.urls')),
     path('', views.index, name='index'),
+    path("persons/", views.all_persons, name="car_list"),
+    path("licenses/", views.all_licenses, name="car_list"),
+    path("cars/", views.all_cars, name="car_list"),
     ]
