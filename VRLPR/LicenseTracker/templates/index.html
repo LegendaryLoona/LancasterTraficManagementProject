@@ -5,7 +5,7 @@
   <title>Cars Management</title>
 </head>
 <body>
-  <h1></h1>
+  <h1>Cars Management</h1>
 
   <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
     <h2>Person Management</h2>
@@ -13,11 +13,11 @@
     <h3>Create Person</h3>
     <div>
       <label>Name: </label>
-      <input type="text" id="person_name" placeholder="e.g., Jack" />
+      <input type="text" id="person_name" />
       <label>Birth Date: </label>
       <input type="date" id="person_birth_date" />
       <label>Address: </label>
-      <input type="text" id="person_address" placeholder="e.g., New York" />
+      <input type="text" id="person_address" />
       <button onclick="createPerson()">Create</button>
     </div>
     <div id="create_person_result" style="color: green;"></div>
@@ -27,13 +27,13 @@
     <h3>Update Person</h3>
     <div>
       <label>Person ID: </label>
-      <input type="number" id="person_id_update" placeholder="e.g., 1" />
+      <input type="number" id="person_id_update" />
       <label>Name: </label>
-      <input type="text" id="person_name_update" placeholder="New name (optional)" />
+      <input type="text" id="person_name_update" />
       <label>Birth Date: </label>
       <input type="date" id="person_birth_date_update" />
       <label>Address: </label>
-      <input type="text" id="person_address_update" placeholder="New address (optional)" />
+      <input type="text" id="person_address_update" />
       <button onclick="updatePerson()">Update</button>
     </div>
     <div id="update_person_result" style="color: green;"></div>
@@ -43,7 +43,7 @@
     <h3>Delete Person</h3>
     <div>
       <label>Person ID: </label>
-      <input type="number" id="person_id_delete" placeholder="e.g., 1" />
+      <input type="number" id="person_id_delete" />
       <button onclick="deletePerson()">Delete</button>
     </div>
     <div id="delete_person_result" style="color: red;"></div>
@@ -53,8 +53,8 @@
     <h3>View Person Information</h3>
     <div>
       <label>Person ID: </label>
-      <input type="number" id="person_id_view" placeholder="e.g., 1" />
-      <button onclick="viewpersoninfo()">View</button>
+      <input type="number" id="person_id_view" />
+      <button onclick="viewPersonInfo()">View</button>
     </div>
     <div id="view_person_result" style="color: blue;"></div>
   </section>
@@ -65,15 +65,15 @@
     <h3>Create Car</h3>
     <div>
       <label>Number: </label>
-      <input type="text" id="car_number" placeholder="License Plate" />
+      <input type="text" id="car_number" />
       <label>Manufacturer: </label>
-      <input type="text" id="car_manufacturer" placeholder="e.g., Toyota" />
+      <input type="text" id="car_manufacturer" />
       <label>Model: </label>
-      <input type="text" id="car_model" placeholder="e.g., Corolla" />
+      <input type="text" id="car_model" />
       <label>Color: </label>
-      <input type="text" id="car_color" placeholder="e.g., Red" />
+      <input type="text" id="car_color" />
       <label>Owner ID (optional): </label>
-      <input type="number" id="car_owner_id" placeholder="Person ID" />
+      <input type="number" id="car_owner_id" />
       <button onclick="createCar()">Create</button>
     </div>
     <div id="create_car_result" style="color: green;"></div>
@@ -83,9 +83,9 @@
     <h3>Update Car</h3>
     <div>
       <label>Car ID: </label>
-      <input type="number" id="car_id_update" placeholder="Car ID to update" />
+      <input type="number" id="car_id_update" />
       <label>Number: </label>
-      <input type="text" id="car_number_update" placeholder="New license plate" />
+      <input type="text" id="car_number_update" />
       <label>Manufacturer: </label>
       <input type="text" id="car_manufacturer_update" />
       <label>Model: </label>
@@ -103,7 +103,7 @@
     <h3>Delete Car</h3>
     <div>
       <label>Car ID: </label>
-      <input type="number" id="car_id_delete" placeholder="Car ID" />
+      <input type="number" id="car_id_delete" />
       <button onclick="deleteCar()">Delete</button>
     </div>
     <div id="delete_car_result" style="color: red;"></div>
@@ -152,6 +152,46 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('view_person_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  // Car management functions
+  function createCar() {
+    const number = document.getElementById('car_number').value.trim();
+    const manufacturer = document.getElementById('car_manufacturer').value.trim();
+    const model = document.getElementById('car_model').value.trim();
+    const color = document.getElementById('car_color').value.trim();
+    const ownerId = document.getElementById('car_owner_id').value;
+    const url = `/cars/create_car/?number=${encodeURIComponent(number)}&manufacturer=${encodeURIComponent(manufacturer)}&model=${encodeURIComponent(model)}&color=${encodeURIComponent(color)}&owner_id=${ownerId}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('create_car_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  function updateCar() {
+    const car_id = document.getElementById('car_id_update').value;
+    const number = document.getElementById('car_number_update').value.trim();
+    const manufacturer = document.getElementById('car_manufacturer_update').value.trim();
+    const model = document.getElementById('car_model_update').value.trim();
+    const color = document.getElementById('car_color_update').value.trim();
+    const ownerId = document.getElementById('car_owner_id_update').value;
+    const url = `/cars/update_car/?car_id=${car_id}&number=${encodeURIComponent(number)}&manufacturer=${encodeURIComponent(manufacturer)}&model=${encodeURIComponent(model)}&color=${encodeURIComponent(color)}&owner_id=${ownerId}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('update_car_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  function deleteCar() {
+    const car_id = document.getElementById('car_id_delete').value;
+    const url = `/cars/delete_car/?car_id=${car_id}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('delete_car_result').innerText = JSON.stringify(data);
       });
   }
 </script>
