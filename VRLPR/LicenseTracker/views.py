@@ -589,3 +589,52 @@ def car_list_view(request):
 
 def index(request):
     return render(request, 'index.html')
+
+
+def all_persons(request):
+    persons = Person.objects.all()
+    data = []
+    for person in persons:
+        data.append({
+            "id": person.id,
+            "name": person.name,
+            "birth_date": str(person.birth_date) if person.birth_date else None,
+            "address": person.address,
+            "owned_cars": person.owned_cars() 
+        })
+    
+    return JsonResponse(data, safe=False)
+
+
+def all_licenses(request):
+    licenses = License.objects.all()
+    data = []
+
+    for license in licenses:
+        data.append({
+            "number": license.number,
+            "issue_date": str(license.issue_date),
+            "expiry_date": str(license.expiry_date),
+            "person_id": license.person.id,
+            "person_name": license.person.name
+        })
+    
+    return JsonResponse(data, safe=False)
+
+def all_cars(request):
+    cars = Car.objects.all()
+    data = []
+    for car in cars:
+        data.append({
+            "id": car.id,
+            "number": car.number,
+            "manufacturer": car.manufacturer,
+            "model": car.model,
+            "color": car.color,
+            "owner_id": car.owner.id if car.owner else None,
+            "owner_name": car.owner.name if car.owner else None,
+            "junction_id": car.junction.id if car.junction else None,
+            "junction_address": car.junction.address if car.junction else None
+        })
+    
+    return JsonResponse(data, safe=False)

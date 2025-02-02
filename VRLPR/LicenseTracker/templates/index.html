@@ -7,6 +7,7 @@
 <body>
   <h1>Cars Management</h1>
 
+  <!-- Person Management -->
   <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
     <h2>Person Management</h2>
     
@@ -54,11 +55,12 @@
     <div>
       <label>Person ID: </label>
       <input type="number" id="person_id_view" />
-      <button onclick="viewPersonInfo()">View</button>
+      <button onclick="viewPersonInfo()">View Person</button>
     </div>
     <div id="view_person_result" style="color: blue;"></div>
   </section>
 
+  <!-- Car Management -->
   <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
     <h2>Car Management</h2>
 
@@ -108,8 +110,124 @@
     </div>
     <div id="delete_car_result" style="color: red;"></div>
   </section>
+  
+<!-- License Management -->
+<section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+  <h2>License Management</h2>
+
+  <h3>Create License</h3>
+  <div>
+    <label>License Number: </label>
+    <input type="text" id="license_number_create" />
+    <label>Issue Date: </label>
+    <input type="date" id="license_issue_date_create" />
+    <label>Expiry Date: </label>
+    <input type="date" id="license_expiry_date_create" />
+    <label>Person ID: </label>
+    <input type="number" id="license_person_id_create" />
+    <button onclick="createLicense()">Create License</button>
+  </div>
+  <div id="create_license_result" style="color: green;"></div>
+
+  <hr/>
+
+  <h3>Update License</h3>
+  <div>
+    <label>License Number: </label>
+    <input type="text" id="license_number_update" />
+    <label>Issue Date: </label>
+    <input type="date" id="license_issue_date_update" />
+    <label>Expiry Date: </label>
+    <input type="date" id="license_expiry_date_update" />
+    <label>Person ID: </label>
+    <input type="number" id="license_person_id_update" />
+    <button onclick="updateLicense()">Update License</button>
+  </div>
+  <div id="update_license_result" style="color: green;"></div>
+
+  <hr/>
+
+  <h3>Delete License</h3>
+  <div>
+    <label>License Number: </label>
+    <input type="text" id="license_number_delete" />
+    <button onclick="deleteLicense()">Delete License</button>
+  </div>
+  <div id="delete_license_result" style="color: red;"></div>
+</section>
+
+  <!-- Junction Cars: cars information -->
+  <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+    <h2>Junction Cars Information</h2>
+    <div>
+      <label>Junction ID: </label>
+      <input type="number" id="junction_id" />
+      <button onclick="viewCars()">View Junction Cars</button>
+    </div>
+    <div id="view_cars_result" style="color: blue;"></div>
+  </section>
+
+  <!-- Show All (Person, License, Car) -->
+  <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+    <h2>Show All Data</h2>
+    <div>
+      <button onclick="fetchAllPersons()">Show All Persons</button>
+      <button onclick="fetchAllLicenses()">Show All Licenses</button>
+      <button onclick="fetchAllCars()">Show All Cars</button>
+    </div>
+    <div style="margin-top: 10px;">
+      <strong>All Persons:</strong>
+      <pre id="all_persons_result" style="color: blue; border: 1px solid #ccc; padding: 5px;"></pre>
+    </div>
+    <div style="margin-top: 10px;">
+      <strong>All Licenses:</strong>
+      <pre id="all_licenses_result" style="color: blue; border: 1px solid #ccc; padding: 5px;"></pre>
+    </div>
+    <div style="margin-top: 10px;">
+      <strong>All Cars:</strong>
+      <pre id="all_cars_result" style="color: blue; border: 1px solid #ccc; padding: 5px;"></pre>
+    </div>
+  </section>
+
+
 
 <script>
+  function createLicense() {
+    const number = document.getElementById('license_number_create').value.trim();
+    const issue_date = document.getElementById('license_issue_date_create').value;
+    const expiry_date = document.getElementById('license_expiry_date_create').value;
+    const person_id = document.getElementById('license_person_id_create').value;
+    const url = `/cars/create_license/?number=${encodeURIComponent(number)}&issue_date=${encodeURIComponent(issue_date)}&expiry_date=${encodeURIComponent(expiry_date)}&person_id=${person_id}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('create_license_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  function updateLicense() {
+    const number = document.getElementById('license_number_update').value.trim();
+    const issue_date = document.getElementById('license_issue_date_update').value;
+    const expiry_date = document.getElementById('license_expiry_date_update').value;
+    const person_id = document.getElementById('license_person_id_update').value;
+    const url = `/cars/update_license/?number=${encodeURIComponent(number)}&issue_date=${encodeURIComponent(issue_date)}&expiry_date=${encodeURIComponent(expiry_date)}&person_id=${person_id}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('update_license_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  function deleteLicense() {
+    const number = document.getElementById('license_number_delete').value.trim();
+    const url = `/cars/delete_license/?number=${encodeURIComponent(number)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('delete_license_result').innerText = JSON.stringify(data);
+      });
+  }
+
   function createPerson() {
     const name = document.getElementById('person_name').value.trim();
     const birth_date = document.getElementById('person_birth_date').value;
@@ -147,7 +265,7 @@
 
   function viewPersonInfo() {
     const person_id = document.getElementById('person_id_view').value;
-    const url = `/cars/person/?id=${person_id}`;
+    const url = `/cars/view_person_info/?id=${person_id}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
@@ -155,7 +273,7 @@
       });
   }
 
-  // Car management functions
+  // Car Management Functions
   function createCar() {
     const number = document.getElementById('car_number').value.trim();
     const manufacturer = document.getElementById('car_manufacturer').value.trim();
@@ -192,6 +310,44 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('delete_car_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  // Junction Cars Function: 
+  function viewCars() {
+    const junction_id = document.getElementById('junction_id').value;
+    const url = `/cars/car/?id=${junction_id}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('view_cars_result').innerText = JSON.stringify(data);
+      });
+  }
+
+
+  function fetchAllPersons() {
+    fetch('/cars/persons/')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('all_persons_result').innerText = JSON.stringify(data, null, 2);
+      });
+  }
+
+  // 2) 显示所有 License
+  function fetchAllLicenses() {
+    fetch('/cars/licenses/')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('all_licenses_result').innerText = JSON.stringify(data, null, 2);
+      });
+  }
+
+  // 3) 显示所有 Car
+  function fetchAllCars() {
+    fetch('/cars/cars/')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('all_cars_result').innerText = JSON.stringify(data, null, 2);
       });
   }
 </script>
