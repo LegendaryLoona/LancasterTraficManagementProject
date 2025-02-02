@@ -1,4 +1,4 @@
-from .models import Person, License, Car, Junktion
+from .models import Person, License, Car, Junktion, Camera, Fine, Violation
 from django.http import JsonResponse
 from datetime import datetime
 from django.db import transaction
@@ -8,13 +8,31 @@ from django.contrib.auth.decorators import login_required
 from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
 
+def make_fine(request):
+    car_id = request.GET.get('c_id')
+    camera_id = request.GET.get('id')
+    violation_id = request.GET.get('v_id')
+    try:
+        car = Car.objects.get(id=car_id) 
+        camera = Camera.objects.get(id=camera_id) 
+        violation = Violation.objects.get(id=violation_id)
+    except Exception as e:
+        return JsonResponse(f"Got Error: {e}", safe=False)
+    try:
+        fine = camera.generate_fine(car, violation)
+        # person = car.owner
+        return JsonResponse(f"Fine generated", safe=False)
+    except Exception as e:
+        return JsonResponse(f"another Error: {e}", safe=False)
+
 def view_person_info(request):
     id = request.GET.get('id')
     person = Person.objects.filter(id=id)[0]
     if not person: 
         return JsonResponse("Failed to find person", safe=False)
-    data = f"Name = {person.name}, birth date = {person.birth_date}, license = {person.license.number}, cars = {person.owned_cars()}"
-
+    try: license_number = person.license.number
+    except: license_number = "None"
+    data = f"Name = {person.name}, birth date = {person.birth_date}, license = {license_number}, cars = {person.owned_cars()}"
     return JsonResponse(data, safe=False)
 
 def view_cars(request):
