@@ -265,7 +265,7 @@
 
   function viewPersonInfo() {
     const person_id = document.getElementById('person_id_view').value;
-    const url = `/cars/view_person_info/?id=${person_id}`;
+    const url = `/cars/person/?id=${person_id}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
