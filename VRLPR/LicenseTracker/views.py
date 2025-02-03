@@ -13,7 +13,8 @@ def view_person_info(request):
     person = Person.objects.filter(id=id)[0]
     if not person: 
         return JsonResponse("Failed to find person", safe=False)
-    data = f"Name = {person.name}, birth date = {person.birth_date}, license = {person.license.number}, cars = {person.owned_cars()}"
+    license_number = person.license.number if hasattr(person, 'license') else "N/A"
+    data = f"Name = {person.name}, birth date = {person.birth_date}, license = {license_number}, cars = {person.owned_cars()}"
 
     return JsonResponse(data, safe=False)
 
