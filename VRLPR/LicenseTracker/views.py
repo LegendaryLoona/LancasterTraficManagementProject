@@ -8,7 +8,10 @@ from django.contrib.auth.decorators import login_required
 from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
 
+@login_required
 def make_fine(request):
+    if not request.user.is_superuser:
+        return JsonResponse("You do not have permission to do this.", safe=False)
     car_id = request.GET.get('c_id')
     camera_id = request.GET.get('id')
     violation_id = request.GET.get('v_id')
@@ -21,7 +24,7 @@ def make_fine(request):
     try:
         fine = camera.generate_fine(car, violation)
         # person = car.owner
-        return JsonResponse(f"Fine generated", safe=False)
+        return JsonResponse(f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
     except Exception as e:
         return JsonResponse(f"another Error: {e}", safe=False)
 
