@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import path, include
 urlpatterns = [
     path('person/', views.view_person_info, name='sample_json_view'),
+    path('make_fine/', views.make_fine, name='sample_json_view'),
     path('car/', views.view_cars, name='sample_json_view'),
     path('create_person/', views.create_person, name='person_create'),
     path('update_person/', views.update_person, name='person_update'),
@@ -26,8 +27,9 @@ urlpatterns = [
     path("car/<int:car_id>/edit/", views.car_edit_view, name="car_edit"),
     path("car/<int:car_id>/delete/", views.car_delete_view, name="car_delete"),
     # path('carss/', include('LicenseTracker.urls')),
-    path('', views.index, name='index'),
+    # path('', views.index, name='index'),
     path("persons/", views.all_persons, name="persons_list"),
     path("licenses/", views.all_licenses, name="licenses_list"),
     path("show_cars/", views.all_cars, name="cars_list1"),
+
     ]
