@@ -1,4 +1,4 @@
-from .models import Person, License, Car, Junktion
+from .models import Person, License, Car, Junktion, Camera, Fine, Violation
 from django.http import JsonResponse
 from datetime import datetime
 from django.db import transaction
@@ -8,14 +8,34 @@ from django.contrib.auth.decorators import login_required
 from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
 
+@login_required
+def make_fine(request):
+    if not request.user.is_superuser:
+        return JsonResponse("You do not have permission to do this.", safe=False)
+    car_id = request.GET.get('c_id')
+    camera_id = request.GET.get('id')
+    violation_id = request.GET.get('v_id')
+    try:
+        car = Car.objects.get(id=car_id) 
+        camera = Camera.objects.get(id=camera_id) 
+        violation = Violation.objects.get(id=violation_id)
+    except Exception as e:
+        return JsonResponse(f"Got Error: {e}", safe=False)
+    try:
+        fine = camera.generate_fine(car, violation)
+        # person = car.owner
+        return JsonResponse(f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
+    except Exception as e:
+        return JsonResponse(f"another Error: {e}", safe=False)
+
 def view_person_info(request):
     id = request.GET.get('id')
     person = Person.objects.filter(id=id)[0]
     if not person: 
         return JsonResponse("Failed to find person", safe=False)
-    license_number = person.license.number if hasattr(person, 'license') else "N/A"
+    try: license_number = person.license.number
+    except: license_number = "None"
     data = f"Name = {person.name}, birth date = {person.birth_date}, license = {license_number}, cars = {person.owned_cars()}"
-
     return JsonResponse(data, safe=False)
 
 def view_cars(request):
@@ -483,16 +503,20 @@ def register_view(request):
     return render(request, "register.html", {"form": form})
 
 def login_view(request):
-
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
+        
         if user is not None:
             login(request, user)
-            return redirect("profile")
+            if user.is_superuser:
+                return render(request, 'index.html')  
+            else:
+                return redirect("profile")  
         else:
-            return render(request, "login.html", {"error": "username or password is incorrect"})
+            return render(request, "login.html", {"error": "Username or password is incorrect"})
+
     return render(request, "login.html")
 
 @login_required
@@ -588,7 +612,11 @@ def car_list_view(request):
     cars = person.cars.all()
     return render(request, "car_list.html", {"cars": cars})
 
+@login_required
 def index(request):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("You do not have permission to access this page.")
+
     return render(request, 'index.html')
 
 
