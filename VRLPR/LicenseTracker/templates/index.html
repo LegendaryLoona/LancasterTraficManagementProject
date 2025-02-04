@@ -190,6 +190,22 @@
   </section>
 
 
+  <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+    <h2>Fines Management</h2>
+  
+    <h3>Add Fine</h3>
+    <div>
+      <label>Car ID: </label>
+      <input type="number" id="car_id_create" />
+      <label>Camera ID: </label>
+      <input type="number" id="camera_id_create" />
+      <label>Violation ID: </label>
+      <input type="number" id="violation_id_create" />
+      <button onclick="addFine()">Add Fine</button>
+    </div>
+    <div id="add_fine_result" style="color: green;"></div>
+
+
 
 <script>
   function createLicense() {
@@ -333,7 +349,7 @@
       });
   }
 
-  // 2) 显示所有 License
+
   function fetchAllLicenses() {
     fetch('/cars/licenses/')
       .then(res => res.json())
@@ -342,12 +358,23 @@
       });
   }
 
-  // 3) 显示所有 Car
   function fetchAllCars() {
-    fetch('/cars/cars/')
+    fetch('/cars/show_cars')
       .then(res => res.json())
       .then(data => {
         document.getElementById('all_cars_result').innerText = JSON.stringify(data, null, 2);
+      });
+  }
+
+  function addFine() {
+    const car_id = document.getElementById('car_id_create').value;
+    const camera_id = document.getElementById('camera_id_create').value;
+    const violation_id = document.getElementById('violation_id_create').value;
+    const url = `/cars/make_fine/?c_id=${encodeURIComponent(car_id)}&id=${encodeURIComponent(camera_id)}&v_id=${encodeURIComponent(violation_id)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('add_fine_result').innerText = JSON.stringify(data);
       });
   }
 </script>
