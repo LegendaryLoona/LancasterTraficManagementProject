@@ -205,7 +205,37 @@
     </div>
     <div id="add_fine_result" style="color: green;"></div>
 
+  <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+      <h2>Logs Management</h2>
+    
+      <h3>Car enter junction</h3>
+      <div>
+        <label>Car ID: </label>
+        <input type="number" id="car_enter_id_create" />
+        <label>Junction ID: </label>
+        <input type="number" id="junction_enter_id_create" />
+        <button onclick="carEnter()">Car enter junction</button>
+      </div>
+      <div id="car_enter_result" style="color: green;"></div>
 
+      <h3>Car leave junction</h3>
+      <div>
+        <label>Car ID: </label>
+        <input type="number" id="car_leave_id_create" />
+        <button onclick="carLeave()">Car leave junction</button>
+      </div>
+      <div id="car_leave_result" style="color: green;"></div>
+
+      <h3>Get junction logs</h3>
+      <div>
+        <label>Junction ID: </label>
+        <input type="number" id="junction_logs_id_create" />
+        <button onclick="junctionLogs()">Get logs</button>
+      </div>
+      <div style="margin-top: 10px;">
+        <strong>All Logs:</strong>
+        <pre id="junction_logs_result" style="color: blue; border: 1px solid #ccc; padding: 5px;"></pre>
+      </div>
 
 <script>
   function createLicense() {
@@ -376,6 +406,38 @@
       .then(data => {
         document.getElementById('add_fine_result').innerText = JSON.stringify(data);
       });
+  }
+  function carEnter() {
+    const car_id = document.getElementById('car_enter_id_create').value;
+    const junction_id = document.getElementById('junction_enter_id_create').value;
+    const url = `/cars/car_enter/?c_id=${encodeURIComponent(car_id)}&j_id=${encodeURIComponent(junction_id)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('car_enter_result').innerText = JSON.stringify(data);
+      });
+  }
+  function carLeave() {
+    const car_id = document.getElementById('car_leave_id_create').value;
+    const url = `/cars/car_leave/?c_id=${encodeURIComponent(car_id)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('car_leave_result').innerText = JSON.stringify(data);
+      });
+  }
+  function junctionLogs() {
+    const junction_id = document.getElementById('junction_logs_id_create').value;
+    const url = `/cars/junction_logs/?j_id=${encodeURIComponent(junction_id)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('junction_logs_result').innerText = JSON.stringify(data, null, 2); 
+    })
+    .catch(err => {
+      document.getElementById('junction_logs_result').innerText =
+        `Error: ${err}`;
+    });
   }
 </script>
 </body>
