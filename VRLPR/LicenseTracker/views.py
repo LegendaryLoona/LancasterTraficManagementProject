@@ -10,14 +10,18 @@ from django.http import HttpResponseForbidden
 
 def junction_logs(request):
     junction_id = request.GET.get('j_id')
-    output_logs = ""
+    output_logs = []
     try: 
         junction = Junktion.objects.get(id=junction_id) 
         logs = junction.get_logs()
         for log in logs:
-            output_logs += f"Log ID: {log.id}, Car ID: {log.car.id}, Junction ID: {log.junction.id}, Entry time: {log.entry_time}, Exit time: {log.exit_time}.     "
+            output_logs.append({"Log ID": log.id,
+                                 "Car ID": log.car.id,
+                                   "Junction ID": log.junction.id,
+                                     "Entry time": log.entry_time,
+                                       "Exit time": log.exit_time})
     except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
-    return JsonResponse(f"Logs: {output_logs}", safe=False)
+    return JsonResponse(output_logs, safe=False)
 def car_enter_junction(request):
     car_id = request.GET.get('c_id')
     junction_id = request.GET.get('j_id')
@@ -89,13 +93,13 @@ def make_fine(request):
             f"Best Regards,\nTraffic Management Authority"
         )
 
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,  
-            [email],  
-            fail_silently=False,
-        )
+        # send_mail(
+        #     subject,
+        #     message,
+        #     settings.DEFAULT_FROM_EMAIL,  
+        #     [email],  
+        #     fail_silently=False,
+        # )
         return JsonResponse(f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
     except Exception as e:
         return JsonResponse(f"another Error: {e}", safe=False)
