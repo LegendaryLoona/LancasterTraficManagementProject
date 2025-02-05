@@ -232,7 +232,10 @@
         <input type="number" id="junction_logs_id_create" />
         <button onclick="junctionLogs()">Get logs</button>
       </div>
-      <div id="junction_logs_result" style="color: green;"></div>
+      <div style="margin-top: 10px;">
+        <strong>All Logs:</strong>
+        <pre id="junction_logs_result" style="color: blue; border: 1px solid #ccc; padding: 5px;"></pre>
+      </div>
 
 <script>
   function createLicense() {
