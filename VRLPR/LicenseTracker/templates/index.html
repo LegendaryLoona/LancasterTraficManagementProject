@@ -432,8 +432,12 @@
     fetch(url)
       .then(res => res.json())
       .then(data => {
-        document.getElementById('junction_logs_result').innerText = JSON.stringify(data);
-      });
+        document.getElementById('junction_logs_result').innerText = JSON.stringify(data, null, 2); 
+    })
+    .catch(err => {
+      document.getElementById('junction_logs_result').innerText =
+        `Error: ${err}`;
+    });
   }
 </script>
 </body>
