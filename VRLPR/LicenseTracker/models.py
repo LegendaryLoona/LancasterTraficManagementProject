@@ -23,6 +23,8 @@ class License(models.Model):
 class Junktion(models.Model):
     address = models.CharField(max_length=50, unique=True)
     max_traffic = models.IntegerField(blank=True, null=True, default=None)
+    def get_logs(self):
+        return self.junction_logs.all()
     def get_cars(self):
         return [car.number for car in self.cars.all()]
     def get_cameras(self):
@@ -69,3 +71,9 @@ class Camera(models.Model):
             return fine
         except Exception as e:
             return f"{e}"
+
+class JunctionLog(models.Model):
+    junction = models.ForeignKey(Junktion, on_delete=models.CASCADE, related_name="junction_logs")
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name="car_logs")
+    entry_time = models.DateTimeField(default=datetime.now())
+    exit_time = models.DateTimeField(null=True, blank=True)
