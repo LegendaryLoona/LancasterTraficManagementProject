@@ -1,4 +1,4 @@
-from .models import Person, License, Car, Junktion, Camera, Fine, Violation
+from .models import Person, License, Car, Junktion, Camera, Fine, Violation, JunctionLog
 from django.http import JsonResponse
 from datetime import datetime
 from django.db import transaction
@@ -7,6 +7,55 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
+
+def junction_logs(request):
+    junction_id = request.GET.get('j_id')
+    output_logs = ""
+    try: 
+        junction = Junktion.objects.get(id=junction_id) 
+        logs = junction.get_logs()
+        for log in logs:
+            output_logs += f"Log ID: {log.id}, Car ID: {log.car.id}, Junction ID: {log.junction.id}, Entry time: {log.entry_time}, Exit time: {log.exit_time}.     "
+    except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
+    return JsonResponse(f"Logs: {output_logs}", safe=False)
+def car_enter_junction(request):
+    car_id = request.GET.get('c_id')
+    junction_id = request.GET.get('j_id')
+    try:
+        car = Car.objects.get(id=car_id) 
+        junction = Junktion.objects.get(id=junction_id) 
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    try:
+        if car.junction != None: return JsonResponse(f"Car is already in Junction {car.junction.id}!", safe=False)
+        with transaction.atomic():
+            car.junction = junction
+            car.save()
+            log = JunctionLog.objects.create(
+                car = car,
+                junction=junction,
+            )
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
+
+def car_leave_junction(request):
+    car_id = request.GET.get('c_id')
+    try:
+        car = Car.objects.get(id=car_id) 
+        log = JunctionLog.objects.get(car = car, junction = car.junction, exit_time__isnull=True)
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    try:
+        with transaction.atomic():
+            car.junction = None
+            log.exit_time = datetime.now()
+            car.save()
+            log.save()
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    return JsonResponse(f"Log updated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
+
 
 @login_required
 def make_fine(request):
