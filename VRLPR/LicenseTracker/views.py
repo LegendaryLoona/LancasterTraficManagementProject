@@ -7,6 +7,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
+from django.core.mail import send_mail
+from django.conf import settings
 
 @login_required
 def make_fine(request):
