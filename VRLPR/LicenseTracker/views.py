@@ -24,6 +24,29 @@ def make_fine(request):
     try:
         fine = camera.generate_fine(car, violation)
         # person = car.owner
+        email = "user's email address"
+        if not email:
+            return JsonResponse(f"Fine generated but no email found for {fine.person.name}", safe=False)
+        subject = "Traffic Violation Fine Notification"
+        message = (
+            f"Dear {fine.person.name},\n\n"
+            f"You have been fined for a traffic violation.\n\n"
+            f"Fine Details:\n"
+            f"Description: {fine.description}\n"
+            f"Amount: ${fine.fine_amount}\n"
+            f"Date: {fine.fine_date}\n"
+            f"Location: {fine.fine_location}\n\n"
+            f"Please pay the fine at your earliest convenience.\n\n"
+            f"Best Regards,\nTraffic Management Authority"
+        )
+
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,  
+            [email],  
+            fail_silently=False,
+        )
         return JsonResponse(f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
     except Exception as e:
         return JsonResponse(f"another Error: {e}", safe=False)
