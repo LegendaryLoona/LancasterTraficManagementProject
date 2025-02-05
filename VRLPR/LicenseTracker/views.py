@@ -1,4 +1,4 @@
-from .models import Person, License, Car, Junktion, Camera, Fine, Violation
+from .models import Person, License, Car, Junktion, Camera, Fine, Violation,JunctionLog
 from django.http import JsonResponse
 from datetime import datetime
 from django.db import transaction
@@ -9,6 +9,58 @@ from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
 from django.core.mail import send_mail
 from django.conf import settings
+
+def junction_logs(request):
+    junction_id = request.GET.get('j_id')
+    output_logs = []
+    try: 
+        junction = Junktion.objects.get(id=junction_id) 
+        logs = junction.get_logs()
+        for log in logs:
+            output_logs.append({"Log ID": log.id,
+                                 "Car ID": log.car.id,
+                                   "Junction ID": log.junction.id,
+                                     "Entry time": log.entry_time,
+                                       "Exit time": log.exit_time})
+    except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
+    return JsonResponse(output_logs, safe=False)
+def car_enter_junction(request):
+    car_id = request.GET.get('c_id')
+    junction_id = request.GET.get('j_id')
+    try:
+        car = Car.objects.get(id=car_id) 
+        junction = Junktion.objects.get(id=junction_id) 
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    try:
+        if car.junction != None: return JsonResponse(f"Car is already in Junction {car.junction.id}!", safe=False)
+        with transaction.atomic():
+            car.junction = junction
+            car.save()
+            log = JunctionLog.objects.create(
+                car = car,
+                junction=junction,
+            )
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
+
+def car_leave_junction(request):
+    car_id = request.GET.get('c_id')
+    try:
+        car = Car.objects.get(id=car_id) 
+        log = JunctionLog.objects.get(car = car, junction = car.junction, exit_time__isnull=True)
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    try:
+        with transaction.atomic():
+            car.junction = None
+            log.exit_time = datetime.now()
+            car.save()
+            log.save()
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
+    return JsonResponse(f"Log updated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
 
 @login_required
 def make_fine(request):
@@ -25,8 +77,8 @@ def make_fine(request):
         return JsonResponse(f"Got Error: {e}", safe=False)
     try:
         fine = camera.generate_fine(car, violation)
-        # person = car.owner
-        email = "user's email address"
+        # person = fine.person  
+        email = "maomaorc@foxmail.com"
         if not email:
             return JsonResponse(f"Fine generated but no email found for {fine.person.name}", safe=False)
         subject = "Traffic Violation Fine Notification"
@@ -49,9 +101,17 @@ def make_fine(request):
             [email],  
             fail_silently=False,
         )
-        return JsonResponse(f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
+
+        return JsonResponse(
+            f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
+        # return JsonResponse(email, safe=False)
     except Exception as e:
         return JsonResponse(f"another Error: {e}", safe=False)
+
+    #     # person = car.owner
+    #     return JsonResponse(f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
+    # except Exception as e:
+    #     return JsonResponse(f"another Error: {e}", safe=False)
 
 def view_person_info(request):
     id = request.GET.get('id')
@@ -654,7 +714,8 @@ def all_persons(request):
             "name": person.name,
             "birth_date": str(person.birth_date) if person.birth_date else None,
             "address": person.address,
-            "owned_cars": person.owned_cars() 
+            "owned_cars": person.owned_cars(),
+            # "email" : person.email
         })
     
     return JsonResponse(data, safe=False)
