@@ -167,6 +167,45 @@
     <div id="view_cars_result" style="color: blue;"></div>
   </section>
 
+  <!-- Junction Management -->
+<section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+  <h2>Junction Management</h2>
+
+  <h3>Create Junction</h3>
+  <div>
+    <label>Address: </label>
+    <input type="text" id="junction_address_create" />
+    <label>Max Traffic: </label>
+    <input type="number" id="junction_max_traffic_create" />
+    <button onclick="createJunction()">Create Junction</button>
+  </div>
+  <div id="create_junction_result" style="color: green;"></div>
+
+  <hr/>
+
+  <h3>Update Junction</h3>
+  <div>
+    <label>Junction ID: </label>
+    <input type="number" id="junction_id_update" />
+    <label>Address: </label>
+    <input type="text" id="junction_address_update" />
+    <label>Max Traffic: </label>
+    <input type="number" id="junction_max_traffic_update" />
+    <button onclick="updateJunction()">Update Junction</button>
+  </div>
+  <div id="update_junction_result" style="color: green;"></div>
+
+  <hr/>
+
+  <h3>Delete Junction</h3>
+  <div>
+    <label>Junction ID: </label>
+    <input type="number" id="junction_id_delete" />
+    <button onclick="deleteJunction()">Delete Junction</button>
+  </div>
+  <div id="delete_junction_result" style="color: red;"></div>
+</section>
+
   <!-- Show All (Person, License, Car) -->
   <section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
     <h2>Show All Data</h2>
@@ -319,7 +358,6 @@
       });
   }
 
-  // Car Management Functions
   function createCar() {
     const number = document.getElementById('car_number').value.trim();
     const manufacturer = document.getElementById('car_manufacturer').value.trim();
@@ -359,7 +397,6 @@
       });
   }
 
-  // Junction Cars Function: 
   function viewCars() {
     const junction_id = document.getElementById('junction_id').value;
     const url = `/cars/car/?id=${junction_id}`;
@@ -434,10 +471,39 @@
       .then(data => {
         document.getElementById('junction_logs_result').innerText = JSON.stringify(data, null, 2); 
     })
-    .catch(err => {
-      document.getElementById('junction_logs_result').innerText =
-        `Error: ${err}`;
-    });
+  }
+
+  function createJunction() {
+    const address = document.getElementById('junction_address_create').value.trim();
+    const max_traffic = document.getElementById('junction_max_traffic_create').value;
+    const url = `/cars/create_junktion/?address=${encodeURIComponent(address)}&max_traffic=${encodeURIComponent(max_traffic)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('create_junction_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  function updateJunction() {
+    const junction_id = document.getElementById('junction_id_update').value;
+    const address = document.getElementById('junction_address_update').value.trim();
+    const max_traffic = document.getElementById('junction_max_traffic_update').value;
+    const url = `/cars/update_junktion/?junktion_id=${junction_id}&address=${encodeURIComponent(address)}&max_traffic=${encodeURIComponent(max_traffic)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('update_junction_result').innerText = JSON.stringify(data);
+      });
+  }
+
+  function deleteJunction() {
+    const junction_id = document.getElementById('junction_id_delete').value;
+    const url = `/cars/delete_junktion/?junktion_id=${junction_id}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('delete_junction_result').innerText = JSON.stringify(data);
+      });
   }
 </script>
 </body>
