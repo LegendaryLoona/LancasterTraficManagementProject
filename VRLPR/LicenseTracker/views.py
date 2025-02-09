@@ -40,6 +40,7 @@ def car_enter_junction(request):
             log = JunctionLog.objects.create(
                 car = car,
                 junction=junction,
+                entry_time = datetime.now()
             )
     except Exception as e:
         return JsonResponse(f"Got an error: {e}", safe=False)
