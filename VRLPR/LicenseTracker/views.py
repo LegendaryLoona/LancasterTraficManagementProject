@@ -10,6 +10,63 @@ from django.http import HttpResponseForbidden
 from django.core.mail import send_mail
 from django.conf import settings
 
+def show_traffic(request):
+    junction_id = request.GET.get('j_id')
+    left_towards = request.GET.get('l_id')
+    time = datetime.now() - timedelta(hours=1)     
+    try:
+        junction = Junktion.objects.get(id=junction_id)
+        towards_junction = Junktion.objects.get(id=left_towards)
+        logs = JunctionLog.objects.filter(junction= junction, left_towards = towards_junction, exit_time__gte = time, car__junction__isnull = True)
+    except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)    
+    data = []    
+    for log in logs:
+        data.append(log.car.number)
+    return JsonResponse(f"Cars that are on their way from {junction.id} towards {towards_junction.id}: {data}", safe=False)
+
+def show_exits(request):
+    junction_id = request.GET.get('j_id')
+    try:
+        junction = Junktion.objects.get(id=junction_id)
+        can_be_left_towards = junction.can_be_left_towards.all()
+    except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
+    data = []
+    for junction in can_be_left_towards:
+        data.append(junction.id)
+    return JsonResponse(f"Can be left towards {data}", safe=False)
+
+
+def connect_junctions(request):
+    junction_id = request.GET.get('j_id')
+    entered_from_ids = request.GET.get('ent_from', '')
+    try:
+        junction = Junktion.objects.get(id=junction_id)
+        entered_from_ids = [int(j_id) for j_id in entered_from_ids.split(',')]
+        for j_id in entered_from_ids:
+            junction.can_be_entered_from.add(Junktion.objects.get(id=j_id))
+        junction.save()
+    except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
+    data = []
+    for junction in junction.can_be_entered_from.all():
+        data.append(junction.id)
+    return JsonResponse(f"Can be entered from {data}", safe=False)
+
+
+
+def junction_logs(request):
+    junction_id = request.GET.get('j_id')
+    output_logs = []
+    try: 
+        junction = Junktion.objects.get(id=junction_id) 
+        logs = junction.get_logs()
+        for log in logs:
+            output_logs.append({"Log ID": log.id,
+                                 "Car ID": log.car.id,
+                                   "Junction ID": log.junction.id,
+                                     "Entry time": log.entry_time,
+                                       "Exit time": log.exit_time})
+    except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
+    return JsonResponse(output_logs, safe=False)
 def junction_logs(request):
     junction_id = request.GET.get('j_id')
     output_logs = []
@@ -48,14 +105,17 @@ def car_enter_junction(request):
 
 def car_leave_junction(request):
     car_id = request.GET.get('c_id')
+    junction_id = request.GET.get('j_id')
     try:
         car = Car.objects.get(id=car_id) 
+        junction = Junktion.objects.get(id=junction_id) 
         log = JunctionLog.objects.get(car = car, junction = car.junction, exit_time__isnull=True)
     except Exception as e:
         return JsonResponse(f"Got an error: {e}", safe=False)
     try:
         with transaction.atomic():
             car.junction = None
+            log.left_towards = junction
             log.exit_time = datetime.now()
             car.save()
             log.save()
