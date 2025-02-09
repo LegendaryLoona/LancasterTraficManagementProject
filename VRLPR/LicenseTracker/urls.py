@@ -34,5 +34,8 @@ urlpatterns = [
     path("persons/", views.all_persons, name="persons_list"),
     path("licenses/", views.all_licenses, name="licenses_list"),
     path("show_cars/", views.all_cars, name="cars_list1"),
+    path("connect_junctions/", views.connect_junctions, name="sample_json_view"),
+    path("show_exits/", views.show_exits, name="sample_json_view"),
+    path("show_traffic/", views.show_traffic, name="sample_json_view"),
 
     ]
