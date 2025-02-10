@@ -1,6 +1,6 @@
 from .models import Person, License, Car, Junktion, Camera, Fine, Violation,JunctionLog
 from django.http import JsonResponse
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
@@ -53,20 +53,6 @@ def connect_junctions(request):
 
 
 
-def junction_logs(request):
-    junction_id = request.GET.get('j_id')
-    output_logs = []
-    try: 
-        junction = Junktion.objects.get(id=junction_id) 
-        logs = junction.get_logs()
-        for log in logs:
-            output_logs.append({"Log ID": log.id,
-                                 "Car ID": log.car.id,
-                                   "Junction ID": log.junction.id,
-                                     "Entry time": log.entry_time,
-                                       "Exit time": log.exit_time})
-    except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
-    return JsonResponse(output_logs, safe=False)
 def junction_logs(request):
     junction_id = request.GET.get('j_id')
     output_logs = []
