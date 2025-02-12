@@ -16,59 +16,41 @@ import urllib, base64
 
 def send_congestion_alert(request, junction_id):
     try:
-        junction = Junktion.objects.get(id=junction_id)  # Fixed model name
+        junction = Junktion.objects.get(id=junction_id)
         end_time = datetime.now()
         start_time = end_time - timedelta(hours=1)
-
-        # Calculate current traffic at the junction
-        current_traffic = JunctionLog.objects.filter(
-            junction=junction,
-            entry_time__range=(start_time, end_time)
-        ).count()
-
-        if current_traffic >= junction.max_traffic * 0.8:
-            visited = set()  # Prevent infinite loops
-            alternative_routes = []
-
-            # Recursive function to find alternative routes (max_depth controls search depth)
-            def find_alternatives(current_junc, depth=0, max_depth=2):
-                if depth > max_depth or current_junc.id in visited:
-                    return
-                visited.add(current_junc.id)
-
-                # Check if the current junction has available capacity
-                traffic = JunctionLog.objects.filter(
-                    junction=current_junc,
-                    entry_time__range=(start_time, end_time)
-                ).count()
-                
-                if traffic < current_junc.max_traffic * 0.8:
-                    alternative_routes.append(current_junc.address)
-                    return  # Stop searching deeper if an alternative is found
-
-                # Continue searching upstream
-                for upstream_junc in current_junc.can_be_entered_from.all():
-                    find_alternatives(upstream_junc, depth+1, max_depth)
-
-            # Start searching from directly connected junctions
-            for direct_junc in junction.can_be_entered_from.all():
-                find_alternatives(direct_junc)
-
-            # Remove duplicates and filter out empty values
-            alternative_routes = list({r for r in alternative_routes if r})
-
-            # Handle the case when no alternative routes are found
-            if not alternative_routes:
-                alternative_routes = ["Recommendation: Wait at your current location or check a navigation app."]
-
-            # Send email alert
-            subject = 'Real-time Traffic Congestion Alert'
-            message = f'Congested junction: {junction.address}\nSuggested alternative routes: {", ".join(alternative_routes)}'
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, ['maomaorc@foxmail.com'])
+        upstream_junctions = junction.can_be_entered_from.all()
+        congested_nodes = []
+        for upstream in upstream_junctions:
+            traffic = JunctionLog.objects.filter(
+                junction=upstream,
+                entry_time__range=(start_time, end_time)
+            ).count()
             
-            return JsonResponse({'status': 'success', 'message': 'Congestion alert sent successfully.'})
+            if traffic >= upstream.max_traffic * 0.8:
+                congested_nodes.append(upstream.address)
+        if congested_nodes:
+            alert_message = (
+                f"Warning: The junction you are approaching ({junction.address}) "
+                f"has congested upstream junctions: {', '.join(congested_nodes)}. "
+                f"Please drive carefully or consider alternative routes."
+            )
+            
+            send_mail(
+                subject='Upstream Junction Congestion Alert',
+                message=alert_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=['maomaorc@foxmail.com']
+            )
+            
+            return JsonResponse({
+                'status': 'warning',
+                'message': alert_message
+            })
+
         else:
-            return JsonResponse({'status': 'no congestion', 'message': 'Traffic is within normal levels.'})
+            return JsonResponse({'status': 'clear', 'message': 'All upstream junctions are clear.'})
+
     except Junktion.DoesNotExist:
         return JsonResponse({'error': 'Junction not found'}, status=404)
     except Exception as e:
