@@ -351,13 +351,12 @@
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
-      return res.text();  // 获取 HTML 内容
+      return res.text(); 
     })
     .then(html => {
-      // 创建一个弹窗
       const popup = window.open("", "Traffic Flow Chart", "width=600,height=400");
-      popup.document.write(html);  // 将 HTML 内容写入弹窗
-      popup.document.close();  // 关闭文档流
+      popup.document.write(html); 
+      popup.document.close();  
     })
     .catch(error => {
       document.getElementById('traffic_flow_result').innerText = `Error: ${error.message}`;
