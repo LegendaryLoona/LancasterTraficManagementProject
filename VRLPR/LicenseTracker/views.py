@@ -1,6 +1,6 @@
 from .models import Person, License, Car, Junktion, Camera, Fine, Violation,JunctionLog
 from django.http import JsonResponse
-from datetime import datetime, timedelta
+from datetime import datetime,timedelta
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
@@ -9,7 +9,121 @@ from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
 from django.core.mail import send_mail
 from django.conf import settings
+import matplotlib.pyplot as plt
+import io
+import urllib, base64
 
+
+def send_congestion_alert(request, junction_id):
+    try:
+        junction = Junktion.objects.get(id=junction_id)  # Fixed model name
+        end_time = datetime.now()
+        start_time = end_time - timedelta(hours=1)
+
+        # Calculate current traffic at the junction
+        current_traffic = JunctionLog.objects.filter(
+            junction=junction,
+            entry_time__range=(start_time, end_time)
+        ).count()
+
+        if current_traffic >= junction.max_traffic * 0.8:
+            visited = set()  # Prevent infinite loops
+            alternative_routes = []
+
+            # Recursive function to find alternative routes (max_depth controls search depth)
+            def find_alternatives(current_junc, depth=0, max_depth=2):
+                if depth > max_depth or current_junc.id in visited:
+                    return
+                visited.add(current_junc.id)
+
+                # Check if the current junction has available capacity
+                traffic = JunctionLog.objects.filter(
+                    junction=current_junc,
+                    entry_time__range=(start_time, end_time)
+                ).count()
+                
+                if traffic < current_junc.max_traffic * 0.8:
+                    alternative_routes.append(current_junc.address)
+                    return  # Stop searching deeper if an alternative is found
+
+                # Continue searching upstream
+                for upstream_junc in current_junc.can_be_entered_from.all():
+                    find_alternatives(upstream_junc, depth+1, max_depth)
+
+            # Start searching from directly connected junctions
+            for direct_junc in junction.can_be_entered_from.all():
+                find_alternatives(direct_junc)
+
+            # Remove duplicates and filter out empty values
+            alternative_routes = list({r for r in alternative_routes if r})
+
+            # Handle the case when no alternative routes are found
+            if not alternative_routes:
+                alternative_routes = ["Recommendation: Wait at your current location or check a navigation app."]
+
+            # Send email alert
+            subject = 'Real-time Traffic Congestion Alert'
+            message = f'Congested junction: {junction.address}\nSuggested alternative routes: {", ".join(alternative_routes)}'
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, ['maomaorc@foxmail.com'])
+            
+            return JsonResponse({'status': 'success', 'message': 'Congestion alert sent successfully.'})
+        else:
+            return JsonResponse({'status': 'no congestion', 'message': 'Traffic is within normal levels.'})
+    except Junktion.DoesNotExist:
+        return JsonResponse({'error': 'Junction not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+def congestion_prediction(request, junction_id):
+    try:
+        junction = Junktion.objects.get(id=junction_id)
+        end_time = datetime.now()
+        start_time = end_time - timedelta(hours=1)  
+        traffic_flow = JunctionLog.objects.filter(junction=junction,entry_time__gte=start_time,entry_time__lte=end_time).count()
+        if traffic_flow >= junction.max_traffic * 0.8:  
+            prediction = "High congestion predicted"
+        elif traffic_flow >= junction.max_traffic * 0.5:
+            prediction = "Moderate congestion predicted"
+        else:
+            prediction = "Low congestion predicted"
+
+        return JsonResponse({
+            'junction': junction.address,
+            'traffic_flow': traffic_flow,
+            'prediction': prediction,
+            'time_period': f"{start_time} to {end_time}"
+        }, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, safe=False)
+def traffic_flow_analysis(request, junction_id):
+    try:
+        junction = Junktion.objects.get(id=junction_id)
+        end_time = datetime.now()
+        start_time = end_time - timedelta(hours=24)  
+        hours = range(24)
+        traffic_flows = [
+            JunctionLog.objects.filter(
+                junction=junction,
+                entry_time__gte=start_time + timedelta(hours=i),
+                entry_time__lt=start_time + timedelta(hours=i+1)
+            ).count()
+            for i in hours
+        ]
+        plt.figure(figsize=(10, 5))
+        plt.plot(hours, traffic_flows, label='Traffic Flow')
+        plt.xlabel('Hour')
+        plt.ylabel('Traffic Flow')
+        plt.title(f'Traffic Flow at {junction.address}')
+        plt.legend()
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        string = base64.b64encode(buf.read())
+        uri = urllib.parse.quote(string)
+        return render(request, 'traffic_flow_analysis.html', {'data': uri})
+    except Junktion.DoesNotExist:
+        return JsonResponse({'error': 'Junction not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 def show_traffic(request):
     junction_id = request.GET.get('j_id')
     left_towards = request.GET.get('l_id')
@@ -67,6 +181,7 @@ def junction_logs(request):
                                        "Exit time": log.exit_time})
     except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
     return JsonResponse(output_logs, safe=False)
+
 def car_enter_junction(request):
     car_id = request.GET.get('c_id')
     junction_id = request.GET.get('j_id')
