@@ -459,7 +459,8 @@
   }
   function carLeave() {
     const car_id = document.getElementById('car_leave_id_create').value;
-    const url = `/cars/car_leave/?c_id=${encodeURIComponent(car_id)}`;
+    const junction_id = document.getElementById('junction_left_towards_id_create').value;
+    const url = `/cars/car_leave/?c_id=${encodeURIComponent(car_id)}&j_id=${encodeURIComponent(junction_id)}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
