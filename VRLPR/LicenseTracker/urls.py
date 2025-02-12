@@ -37,5 +37,7 @@ urlpatterns = [
     path("connect_junctions/", views.connect_junctions, name="sample_json_view"),
     path("show_exits/", views.show_exits, name="sample_json_view"),
     path("show_traffic/", views.show_traffic, name="sample_json_view"),
-
-    ]
+    path('traffic-flow-analysis/<int:junction_id>/', views.traffic_flow_analysis, name='traffic_flow_analysis'),
+    path('congestion-prediction/<int:junction_id>/', views.congestion_prediction, name='congestion_prediction'),
+    path('send-congestion-alert/<int:junction_id>/', views.send_congestion_alert, name='send_congestion_alert'),
+]
