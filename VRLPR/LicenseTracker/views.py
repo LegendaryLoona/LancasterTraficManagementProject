@@ -21,61 +21,84 @@ def send_congestion_alert(request, junction_id):
         start_time = end_time - timedelta(hours=1)
         upstream_junctions = junction.can_be_entered_from.all()
         congested_nodes = []
+        clear_nodes = []
+
         for upstream in upstream_junctions:
             traffic = JunctionLog.objects.filter(
                 junction=upstream,
                 entry_time__range=(start_time, end_time)
             ).count()
-            
             if traffic >= upstream.max_traffic * 0.8:
                 congested_nodes.append(upstream.address)
+            else:
+                clear_nodes.append(upstream.address)
+
         if congested_nodes:
             alert_message = (
                 f"Warning: The junction you are approaching ({junction.address}) "
-                f"has congested upstream junctions: {', '.join(congested_nodes)}. "
-                f"Please drive carefully or consider alternative routes."
+                f"has congested upstream junctions: {', '.join(congested_nodes)}.\n"
+                f"Please drive carefully or consider alternative routes.\n"
+                f"You can drive to other nodes that are not congested: {', '.join(clear_nodes)}\n"
             )
-            
             send_mail(
                 subject='Upstream Junction Congestion Alert',
                 message=alert_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=['maomaorc@foxmail.com']
             )
-            
             return JsonResponse({
                 'status': 'warning',
-                'message': alert_message
-            })
+                'message': (
+                    f"Warning: The junction you are approaching ({junction.address}) "
+                    f"has congested upstream junctions: {', '.join(congested_nodes)}.\n"
+                    ),
+})
+
 
         else:
-            return JsonResponse({'status': 'clear', 'message': 'All upstream junctions are clear.'})
+            return JsonResponse({
+                'status': 'clear',
+                'message': 'All upstream junctions are clear.',
+                'clear_nodes': clear_nodes
+            })
 
     except Junktion.DoesNotExist:
         return JsonResponse({'error': 'Junction not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-def congestion_prediction(request, junction_id):
+def congestion_prediction(request):
     try:
-        junction = Junktion.objects.get(id=junction_id)
         end_time = datetime.now()
-        start_time = end_time - timedelta(hours=1)  
-        traffic_flow = JunctionLog.objects.filter(junction=junction,entry_time__gte=start_time,entry_time__lte=end_time).count()
-        if traffic_flow >= junction.max_traffic * 0.8:  
-            prediction = "High congestion predicted"
-        elif traffic_flow >= junction.max_traffic * 0.5:
-            prediction = "Moderate congestion predicted"
-        else:
-            prediction = "Low congestion predicted"
+        start_time = end_time - timedelta(hours=1)
+        junctions = Junktion.objects.all()
+        predictions = []
+
+        for junction in junctions:
+            traffic_flow = JunctionLog.objects.filter(
+                junction=junction,
+                entry_time__range=(start_time, end_time)
+            ).count()
+            if traffic_flow >= junction.max_traffic * 0.8:
+                prediction = "High congestion predicted"
+            elif traffic_flow >= junction.max_traffic * 0.5:
+                prediction = "Moderate congestion predicted"
+            else:
+                prediction = "Low congestion predicted"
+            predictions.append({
+                'junction_id': junction.id,
+                'junction_address': junction.address,
+                'traffic_flow': traffic_flow,
+                'prediction': prediction,
+                'time_period': f"{start_time} to {end_time}"
+            })
 
         return JsonResponse({
-            'junction': junction.address,
-            'traffic_flow': traffic_flow,
-            'prediction': prediction,
-            'time_period': f"{start_time} to {end_time}"
+            'status': 'success',
+            'predictions': predictions
         }, safe=False)
+
     except Exception as e:
-        return JsonResponse({"error": str(e)}, safe=False)
+        return JsonResponse({"error": str(e)}, status=500)
 def traffic_flow_analysis(request, junction_id):
     try:
         junction = Junktion.objects.get(id=junction_id)
@@ -90,18 +113,29 @@ def traffic_flow_analysis(request, junction_id):
             ).count()
             for i in hours
         ]
+        traffic_status = junction.how_busy()
+        line_color = 'red' if traffic_status == "High traffic" else 'blue'
+        congestion_threshold = junction.max_traffic * 0.8 if junction.max_traffic else None
         plt.figure(figsize=(10, 5))
-        plt.plot(hours, traffic_flows, label='Traffic Flow')
+        plt.plot(hours, traffic_flows, label='Traffic Flow', color=line_color)
+        if congestion_threshold is not None:
+            plt.axhline(y=congestion_threshold, color='orange', linestyle='--', label='Congestion Threshold')
         plt.xlabel('Hour')
         plt.ylabel('Traffic Flow')
         plt.title(f'Traffic Flow at {junction.address}')
         plt.legend()
+        
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
         string = base64.b64encode(buf.read())
         uri = urllib.parse.quote(string)
-        return render(request, 'traffic_flow_analysis.html', {'data': uri})
+        
+        return render(request, 'traffic_flow_analysis.html', {
+            'data': uri,
+            'traffic_status': traffic_status,
+            'congestion_threshold': congestion_threshold
+        })
     except Junktion.DoesNotExist:
         return JsonResponse({'error': 'Junction not found'}, status=404)
     except Exception as e:
