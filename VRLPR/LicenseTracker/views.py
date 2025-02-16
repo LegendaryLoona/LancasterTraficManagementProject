@@ -7,12 +7,28 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import (UserRegisterForm,PersonForm,LicenseForm,CarForm)
 from django.http import HttpResponseForbidden
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.core.mail import send_mail
 from django.conf import settings
 import matplotlib.pyplot as plt
 import io
 import urllib, base64
 
+def change_emergency_status(request, car_id):
+    try:
+        car = Car.objects.get(id=car_id)
+        with transaction.atomic(): 
+            if car.important == True:
+                car.important = False
+                car.save()  
+                return JsonResponse(f"Removed important status from Car {car.id} ", safe=False)
+            else:
+                car.important = True
+                car.save()
+                return JsonResponse(f"Marked Car {car.id} as important", safe=False)
+    except Exception as e:
+        return JsonResponse(f"Got an error: {e}", safe=False)
 
 def send_congestion_alert(request, junction_id):
     try:
@@ -40,12 +56,12 @@ def send_congestion_alert(request, junction_id):
                 f"Please drive carefully or consider alternative routes.\n"
                 f"You can drive to other nodes that are not congested: {', '.join(clear_nodes)}\n"
             )
-            send_mail(
-                subject='Upstream Junction Congestion Alert',
-                message=alert_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=['maomaorc@foxmail.com']
-            )
+            # send_mail(
+            #     subject='Upstream Junction Congestion Alert',
+            #     message=alert_message,
+            #     from_email=settings.DEFAULT_FROM_EMAIL,
+            #     recipient_list=['maomaorc@foxmail.com']
+            # )
             return JsonResponse({
                 'status': 'warning',
                 'message': (
@@ -216,6 +232,28 @@ def car_enter_junction(request):
                 junction=junction,
                 entry_time = datetime.now()
             )
+        if car.important == True:
+            cars = junction.get_cars()
+            emails = []
+            for i in cars:
+                email = i.owner.email
+                emails.append(email)
+            subject = "Attention!"
+            message = (
+                f"Dear driver,\n\n"
+                f"There is an emergency vehicle near you.\n\n"
+                f"Please make way for it.\n\n"
+                f"Best Regards,\nTraffic Management Authority"
+            )
+
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,  
+                recipient_list=emails,  
+                fail_silently=False,
+            )
+            return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}, All emails sent", safe=False)
     except Exception as e:
         return JsonResponse(f"Got an error: {e}", safe=False)
     return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
@@ -272,13 +310,13 @@ def make_fine(request):
             f"Best Regards,\nTraffic Management Authority"
         )
 
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,  
-            [email],  
-            fail_silently=False,
-        )
+        # send_mail(
+        #     subject,
+        #     message,
+        #     settings.DEFAULT_FROM_EMAIL,  
+        #     [email],  
+        #     fail_silently=False,
+        # )
 
         return JsonResponse(
             f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
@@ -325,6 +363,7 @@ def create_person(request):
         name = request.GET.get('name')
         birth_date_str = request.GET.get('birth_date')
         address = request.GET.get('address')
+        email = request.GET.get('email')
         if not name:
             return JsonResponse({ "message": "Name is required."}, safe=False)
         birth_date = None
@@ -333,12 +372,18 @@ def create_person(request):
                 birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
             except ValueError:
                 return JsonResponse({ "message": f"Invalid date format: {birth_date_str}"}, safe=False)
+        if email:
+            try:
+                validate_email(email)
+            except ValidationError as e:
+               return JsonResponse(f"Email is wrong. Error: {e}", safe=False)
         try:
             with transaction.atomic():
                 person = Person.objects.create(
                     name=name,
                     birth_date=birth_date,
-                    address=address
+                    address=address,
+                    email = email
                 )
             return JsonResponse({
                  
