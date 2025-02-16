@@ -40,4 +40,5 @@ urlpatterns = [
     path('traffic-flow-analysis/<int:junction_id>/', views.traffic_flow_analysis, name='traffic_flow_analysis'),
     path('congestion-prediction/<int:junction_id>/', views.congestion_prediction, name='congestion_prediction'),
     path('send-congestion-alert/<int:junction_id>/', views.send_congestion_alert, name='send_congestion_alert'),
+    path('change_important_status/<int:car_id>/', views.change_emergency_status, name='change_emergency_status'),
 ]
