@@ -16,6 +16,7 @@ This repository contains a Django-based application designed as a project for La
 
 ## Building and Running
 * Make sure your PostgreSQL server is running
+* Check if the database parametres in settings.py are accurate. Located at VRLPR/CarProject
 * Run the following commands:
 * * Python manage.py makemigrations LicenseTracker
   * Python manage.py migrate LicenseTracker
