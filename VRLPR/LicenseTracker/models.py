@@ -8,6 +8,7 @@ class Person(models.Model):
     birth_date = models.DateField(null=True, blank=True)
     # age = models.IntegerField(blank=True, null=True, default=None)
     address = models.CharField(max_length=50, null=True, blank=True)
+    email = models.CharField(max_length=50, null=True, blank=True)
 
     def owned_cars(self):
         return [car.number for car in self.cars.all()]
@@ -32,7 +33,7 @@ class Junktion(models.Model):
     def get_logs(self):
         return self.junction_logs.all()
     def get_cars(self):
-        return [car.number for car in self.cars.all()]
+        return [car for car in self.cars.all()]
     def get_cameras(self):
         return [camera.number for camera in self.cameras.all()]
     def how_busy(self):
@@ -50,6 +51,7 @@ class Car(models.Model):
     color = models.CharField(max_length=50, null=True, default=None)
     owner = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, related_name='cars')
     junction = models.ForeignKey(Junktion, on_delete=models.SET_NULL, null=True, related_name='cars')
+    important = models.BooleanField(default=False)
 
 class Violation(models.Model):
     description = models.CharField(max_length=350, null=True, default=None)
