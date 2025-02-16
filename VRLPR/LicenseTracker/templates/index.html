@@ -19,6 +19,8 @@
       <input type="date" id="person_birth_date" />
       <label>Address: </label>
       <input type="text" id="person_address" />
+      <label>Email: </label>
+      <input type="text" id="person_email" />
       <button onclick="createPerson()">Create</button>
     </div>
     <div id="create_person_result" style="color: green;"></div>
@@ -325,7 +327,34 @@
   </div>
 </section>
 
+<section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+  <h2>Change Important Status</h2>
+  <div>
+    <label>Car ID: </label>
+    <input type="number" id="car_important_id" />
+    <button onclick="changeimportantStatus()">Change Status</button>
+  </div>
+  <div style="margin-top: 10px;">
+    <strong>Result:</strong>
+    <pre id="car_important_result" style="color: blue; border: 1px solid #ccc; padding: 5px;"></pre>
+  </div>
+</section>
+
+
 <script>
+function changeimportantStatus() {
+  const car_id = document.getElementById('car_important_id').value;
+  const url = `/cars/change_important_status/${car_id}/`;
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('car_important_result').innerText = JSON.stringify(data, null, 2);
+    })
+    .catch(error => {
+      document.getElementById('car_important_result').innerText = `Error: ${error.message}`;
+    });
+  }
+
 function sendCongestionAlert() {
   const junctionId = document.getElementById('congestion_alert_junction_id').value;
   const url = `/cars/send-congestion-alert/${junctionId}/`;
@@ -410,7 +439,8 @@ function analyzeTrafficFlow() {
     const name = document.getElementById('person_name').value.trim();
     const birth_date = document.getElementById('person_birth_date').value;
     const address = document.getElementById('person_address').value.trim();
-    const url = `/cars/create_person/?name=${encodeURIComponent(name)}&birth_date=${encodeURIComponent(birth_date)}&address=${encodeURIComponent(address)}`;
+    const email = document.getElementById('person_email').value.trim();
+    const url = `/cars/create_person/?name=${encodeURIComponent(name)}&birth_date=${encodeURIComponent(birth_date)}&address=${encodeURIComponent(address)}&email=${encodeURIComponent(email)}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
