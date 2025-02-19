@@ -15,6 +15,44 @@ import matplotlib.pyplot as plt
 import io
 import urllib, base64
 
+ef activate_emergency_signals(request):
+    try:
+        with transaction.atomic():
+            Junktion.objects.update(signals="Normal")
+            emergency_cars = Car.objects.filter(important=True)
+            updated_junctions = set()
+            for car in emergency_cars:
+                if car.junction:
+                    car.junction.signals = "Emergency"
+                    car.junction.save()
+                    updated_junctions.add(car.junction.address)
+                else:
+                    log = JunctionLog.objects.filter(car=car, exit_time__isnull=False).order_by('-exit_time').first()
+                    if log and log.left_towards:
+                        log.left_towards.signals = "Emergency"
+                        log.left_towards.save()
+                        updated_junctions.add(log.left_towards.address)
+        return JsonResponse({
+            "status": "success",
+            "mode": "Emergency",
+            "updated_junctions": list(updated_junctions),
+            "message": "Emergency mode activated for relevant junctions."
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "error": str(e)}, safe=False)
+
+def restore_normal_signals(request):
+    try:
+        with transaction.atomic():
+            Junktion.objects.update(signals="Normal")
+        return JsonResponse({
+            "status": "success",
+            "mode": "Normal",
+            "message": "All junctions restored to Normal."
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "error": str(e)}, safe=False)
+
 def _send_emergency_alert(emergency_car: Car, target_car: Car):
     if not target_car.owner or not target_car.owner.email:
         return []  
