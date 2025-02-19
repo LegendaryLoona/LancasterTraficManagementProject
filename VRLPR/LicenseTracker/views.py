@@ -156,14 +156,18 @@ def car_enter_junction(request):
                 f"{', '.join(clear_nodes) if clear_nodes else 'No other clear junctions'}.\n"
             )
         if car.owner and car.owner.email and alert_message:
+            if not car.important:  
+                try:
                     send_mail(
                         subject="Upstream Junction Emergency Alert",
                         message=alert_message,
                         from_email=settings.DEFAULT_FROM_EMAIL,
                         recipient_list=[car.owner.email],
-                        fail_silently=True, 
+                        fail_silently=True,
                     )
-                    response_messages.append(f"Email sent to {car.owner.email}.")
+                    response_messages.append(f" Email sent to {car.owner.email}.")
+                except Exception as e:
+                    response_messages.append(f" Email failed: {str(e)}")
         return JsonResponse({
             "status": "success",
             "messages": response_messages,
