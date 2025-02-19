@@ -348,9 +348,36 @@
     <h3 style="color: #dc3545;">Active Alerts</h3>
     <div id="alert_messages"></div>
   </div>
-
+<!-- Emergency Signal Control Section -->
+<section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+  <h2>Emergency Signal Control</h2>
+  <button onclick="activateEmergency()">Activate Emergency Mode</button>
+  <button onclick="restoreNormal()">Restore Normal Mode</button>
+  <div id="emergency_status" style="margin-top: 10px; color: blue;"></div>
+</section>
 
 <script>
+function activateEmergency() {
+  fetch(`/cars/activate_emergency_signals/`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('emergency_status').innerText = JSON.stringify(data, null, 2);
+    })
+    .catch(err => {
+      document.getElementById('emergency_status').innerText = `Error: ${err.message}`;
+    });
+}
+
+function restoreNormal() {
+  fetch(`/cars/restore_normal_signals/`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('emergency_status').innerText = JSON.stringify(data, null, 2);
+    })
+    .catch(err => {
+      document.getElementById('emergency_status').innerText = `Error: ${err.message}`;
+    });
+}
 function appendAlert(message, isError = false) {
   const alertDiv = document.getElementById('alert_messages');
   const alertElement = document.createElement('div');
