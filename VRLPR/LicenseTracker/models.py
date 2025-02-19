@@ -23,8 +23,8 @@ class License(models.Model):
 
 class Junktion(models.Model):
     address = models.CharField(max_length=50, unique=True)
-    max_traffic = models.IntegerField(blank=True, null=True, default=None)
-    can_be_entered_from = models.ManyToManyField(
+    max_traffic = models.IntegerField(blank=True, null=True, default=None)  
+    can_drive_to = models.ManyToManyField(
         "self",
         symmetrical=False,
         related_name="can_be_left_towards",
@@ -52,6 +52,7 @@ class Car(models.Model):
     owner = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, related_name='cars')
     junction = models.ForeignKey(Junktion, on_delete=models.SET_NULL, null=True, related_name='cars')
     important = models.BooleanField(default=False)
+    location = models.CharField(max_length=50, null=True, default=None)
 
 class Violation(models.Model):
     description = models.CharField(max_length=350, null=True, default=None)
