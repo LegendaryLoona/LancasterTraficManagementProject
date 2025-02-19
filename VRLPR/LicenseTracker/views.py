@@ -15,20 +15,144 @@ import matplotlib.pyplot as plt
 import io
 import urllib, base64
 
+def _send_emergency_alert(emergency_car: Car, target_car: Car):
+    if not target_car.owner or not target_car.owner.email:
+        return []  
+    message = (
+        f"Emergency Alert!\n\n"
+        f"Vehicle {emergency_car.number} ({emergency_car.manufacturer} {emergency_car.model}) "
+        f"is active in your area ({target_car.location}).\n"
+        f"Please proceed with caution and avoid the area if possible.\n\n"
+        f"Emergency Vehicle Details:\n"
+        f"- Number: {emergency_car.number}\n"
+        f"- Color: {emergency_car.color}\n"
+        f"- Model: {emergency_car.manufacturer} {emergency_car.model}\n\n"
+        f"Your Vehicle Details:\n"
+        f"- Number: {target_car.number}\n"
+        f"- Location: {target_car.location}\n"
+    )
+    try:
+        send_mail(
+            subject="Emergency Alert: Emergency Vehicle Nearby",
+            message=message,
+            from_email="noreply@trafficmanagement.com",
+            recipient_list=[target_car.owner.email],
+            fail_silently=False,
+        )
+        # print(f"Email sent to {target_car.owner.email}:\n{message}")
+        return []
+    except Exception as e:
+        return [f"Failed to send email to {target_car.owner.email}: {str(e)}"]
 def change_emergency_status(request, car_id):
     try:
         car = Car.objects.get(id=car_id)
-        with transaction.atomic(): 
-            if car.important == True:
-                car.important = False
-                car.save()  
-                return JsonResponse(f"Removed important status from Car {car.id} ", safe=False)
+        with transaction.atomic():
+            car.important = not car.important
+            car.save()
+            messages = []
+            if car.important:
+                same_location_cars = Car.objects.filter(location=car.location).exclude(id=car.id)
+                for target_car in same_location_cars:
+                    messages.extend(_send_emergency_alert(car, target_car))
+
+                return JsonResponse({
+                    "status": "success",
+                    "message": f"Marked Car {car.number} as emergency vehicle",
+                    "messages": messages
+                })
             else:
-                car.important = True
-                car.save()
-                return JsonResponse(f"Marked Car {car.id} as important", safe=False)
+                return JsonResponse({
+                    "status": "success",
+                    "message": f"Removed emergency status from Car {car.number}"
+                })
     except Exception as e:
-        return JsonResponse(f"Got an error: {e}", safe=False)
+        return JsonResponse({"status": "error","error": str(e)}, safe=False)
+
+def car_enter_junction(request):
+    car_id = request.GET.get('c_id')
+    junction_id = request.GET.get('j_id')
+
+    try:
+        car = Car.objects.select_related('junction').get(id=car_id)
+        junction = Junktion.objects.get(id=junction_id)
+        if car.junction:
+            return JsonResponse({"error": f"{car.number} is already at {car.junction.address}"}, safe=False)
+        with transaction.atomic():
+            car.junction = junction
+            car.location = junction.address
+            car.save()
+            JunctionLog.objects.create(
+                car=car,
+                junction=junction,
+                entry_time=datetime.now()
+            )
+        response_messages = []
+        if car.important:
+            same_location_cars = Car.objects.filter(location=car.location).exclude(id=car.id)
+            for target_car in same_location_cars:
+                response_messages.extend(_send_emergency_alert(car, target_car))
+        emergency_cars_in_junction = junction.cars.filter(important=True).exclude(id=car.id)
+        for emergency_car in emergency_cars_in_junction:
+            response_messages.extend(_send_emergency_alert(emergency_car, car))
+        return JsonResponse({
+            "status": "success",
+            "messages": response_messages,
+            "log_info": f"{car.number} has entered {junction.address}"
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, safe=False)
+
+def car_leave_junction(request):
+    car_id = request.GET.get('c_id')
+    destination_id = request.GET.get('j_id')
+    
+    try:
+        car = Car.objects.select_related('junction').get(id=car_id)
+        destination = Junktion.objects.get(id=destination_id)
+        log = JunctionLog.objects.get(
+            car=car,
+            exit_time__isnull=True,
+            junction=car.junction
+        )
+        with transaction.atomic():
+            original_junction = car.junction
+            car.junction = None
+            car.location = f"From {original_junction.address} to {destination.address}"
+            car.save()
+            log.left_towards = destination
+            log.exit_time = datetime.now()
+            log.save()
+        response_messages = []
+        if car.important:
+            same_location_cars = Car.objects.filter(location=car.location).exclude(id=car.id)
+            for target_car in same_location_cars:
+                response_messages.extend(_send_emergency_alert(car, target_car))
+        else:
+            same_location_cars = Car.objects.filter(location=car.location).exclude(id=car.id)
+            for target_car in same_location_cars:
+                if target_car.important:
+                    response_messages.extend(_send_emergency_alert(target_car, car))
+        return JsonResponse({
+            "status": "success",
+            "messages": response_messages,
+            "log_info": f"{car.number} has left {original_junction.address} to {destination.address}"
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, safe=False)
+# def change_emergency_status(request, car_id):
+#     try:
+#         car = Car.objects.get(id=car_id)
+#         with transaction.atomic(): 
+#             if car.important == True:
+#                 car.important = False
+#                 car.save()  
+#                 return JsonResponse(f"Removed important status from Car {car.id} ", safe=False)
+#             else:
+#                 car.important = True
+#                 car.save()
+#                 return JsonResponse(f"Marked Car {car.id} as important", safe=False)
+#     except Exception as e:
+#         return JsonResponse(f"Got an error: {e}", safe=False)
 
 def send_congestion_alert(request, junction_id):
     try:
@@ -214,69 +338,69 @@ def junction_logs(request):
     except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
     return JsonResponse(output_logs, safe=False)
 
-def car_enter_junction(request):
-    car_id = request.GET.get('c_id')
-    junction_id = request.GET.get('j_id')
-    try:
-        car = Car.objects.get(id=car_id) 
-        junction = Junktion.objects.get(id=junction_id) 
-    except Exception as e:
-        return JsonResponse(f"Got an error: {e}", safe=False)
-    try:
-        if car.junction != None: return JsonResponse(f"Car is already in Junction {car.junction.id}!", safe=False)
-        with transaction.atomic():
-            car.junction = junction
-            car.save()
-            log = JunctionLog.objects.create(
-                car = car,
-                junction=junction,
-                entry_time = datetime.now()
-            )
-        if car.important == True:
-            cars = junction.get_cars()
-            emails = []
-            for i in cars:
-                email = i.owner.email
-                emails.append(email)
-            subject = "Attention!"
-            message = (
-                f"Dear driver,\n\n"
-                f"There is an emergency vehicle near you.\n\n"
-                f"Please make way for it.\n\n"
-                f"Best Regards,\nTraffic Management Authority"
-            )
+# def car_enter_junction(request):
+#     car_id = request.GET.get('c_id')
+#     junction_id = request.GET.get('j_id')
+#     try:
+#         car = Car.objects.get(id=car_id) 
+#         junction = Junktion.objects.get(id=junction_id) 
+#     except Exception as e:
+#         return JsonResponse(f"Got an error: {e}", safe=False)
+#     try:
+#         if car.junction != None: return JsonResponse(f"Car is already in Junction {car.junction.id}!", safe=False)
+#         with transaction.atomic():
+#             car.junction = junction
+#             car.save()
+#             log = JunctionLog.objects.create(
+#                 car = car,
+#                 junction=junction,
+#                 entry_time = datetime.now()
+#             )
+#         if car.important == True:
+#             cars = junction.get_cars()
+#             emails = []
+#             for i in cars:
+#                 email = i.owner.email
+#                 emails.append(email)
+#             subject = "Attention!"
+#             message = (
+#                 f"Dear driver,\n\n"
+#                 f"There is an emergency vehicle near you.\n\n"
+#                 f"Please make way for it.\n\n"
+#                 f"Best Regards,\nTraffic Management Authority"
+#             )
 
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,  
-                recipient_list=emails,  
-                fail_silently=False,
-            )
-            return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}, All emails sent", safe=False)
-    except Exception as e:
-        return JsonResponse(f"Got an error: {e}", safe=False)
-    return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
+#             send_mail(
+#                 subject,
+#                 message,
+#                 settings.DEFAULT_FROM_EMAIL,  
+#                 recipient_list=emails,  
+#                 fail_silently=False,
+#             )
+#             return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}, All emails sent", safe=False)
+#     except Exception as e:
+#         return JsonResponse(f"Got an error: {e}", safe=False)
+#     return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
 
-def car_leave_junction(request):
-    car_id = request.GET.get('c_id')
-    junction_id = request.GET.get('j_id')
-    try:
-        car = Car.objects.get(id=car_id) 
-        junction = Junktion.objects.get(id=junction_id) 
-        log = JunctionLog.objects.get(car = car, junction = car.junction, exit_time__isnull=True)
-    except Exception as e:
-        return JsonResponse(f"Got an error: {e}", safe=False)
-    try:
-        with transaction.atomic():
-            car.junction = None
-            log.left_towards = junction
-            log.exit_time = datetime.now()
-            car.save()
-            log.save()
-    except Exception as e:
-        return JsonResponse(f"Got an error: {e}", safe=False)
-    return JsonResponse(f"Log updated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
+# def car_leave_junction(request):
+#     car_id = request.GET.get('c_id')
+#     junction_id = request.GET.get('j_id')
+#     try:
+#         car = Car.objects.get(id=car_id) 
+#         junction = Junktion.objects.get(id=junction_id) 
+#         log = JunctionLog.objects.get(car = car, junction = car.junction, exit_time__isnull=True)
+#     except Exception as e:
+#         return JsonResponse(f"Got an error: {e}", safe=False)
+#     try:
+#         with transaction.atomic():
+#             car.junction = None
+#             log.left_towards = junction
+#             log.exit_time = datetime.now()
+#             car.save()
+#             log.save()
+#     except Exception as e:
+#         return JsonResponse(f"Got an error: {e}", safe=False)
+#     return JsonResponse(f"Log updated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
 
 @login_required
 def make_fine(request):
