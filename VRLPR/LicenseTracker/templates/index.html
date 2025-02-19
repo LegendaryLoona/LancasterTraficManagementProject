@@ -263,7 +263,7 @@
       <div>
         <label>Car ID: </label>
         <input type="number" id="car_leave_id_create" />
-        <label>Junction ID: </label>
+        <label>Toward Junction ID: </label>
         <input type="number" id="junction_left_towards_id_create" />
         <button onclick="carLeave()">Car leave junction</button>
       </div>
@@ -339,21 +339,44 @@
     <pre id="car_important_result" style="color: blue; border: 1px solid #ccc; padding: 5px;"></pre>
   </div>
 </section>
+<!-- Change Important Status -->
+<section style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+  <h2>Emergency Alerts</h2>
+  
+<!-- Real-time Notifications -->
+  <div id="emergency_alerts" style="height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px;">
+    <h3 style="color: #dc3545;">Active Alerts</h3>
+    <div id="alert_messages"></div>
+  </div>
 
 
 <script>
+function appendAlert(message, isError = false) {
+  const alertDiv = document.getElementById('alert_messages');
+  const alertElement = document.createElement('div');
+  alertElement.style.color = isError ? '#dc3545' : '#28a745';
+  alertElement.style.padding = '5px';
+  alertElement.style.margin = '5px 0';
+  alertElement.style.borderLeft = `3px solid ${isError ? '#dc3545' : '#28a745'}`;
+  alertElement.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+  alertDiv.appendChild(alertElement);
+  emergency_alerts.scrollTop = emergency_alerts.scrollHeight;
+}
+
 function changeimportantStatus() {
   const car_id = document.getElementById('car_important_id').value;
-  const url = `/cars/change_important_status/${car_id}/`;
-  fetch(url)
+  fetch(`/cars/change_important_status/${car_id}/`)
     .then(res => res.json())
     .then(data => {
-      document.getElementById('car_important_result').innerText = JSON.stringify(data, null, 2);
+      const message = data.error ? `Error: ${data.error}` : data.message;
+      appendAlert(message, !!data.error);
+      document.getElementById('car_important_result').innerText = 
+        JSON.stringify(data, null, 2);
     })
     .catch(error => {
-      document.getElementById('car_important_result').innerText = `Error: ${error.message}`;
+      appendAlert(`Network Error: ${error.message}`, true);
     });
-  }
+}
 
 function sendCongestionAlert() {
   const junctionId = document.getElementById('congestion_alert_junction_id').value;
@@ -568,25 +591,38 @@ function analyzeTrafficFlow() {
       });
   }
   function carEnter() {
-    const car_id = document.getElementById('car_enter_id_create').value;
-    const junction_id = document.getElementById('junction_enter_id_create').value;
-    const url = `/cars/car_enter/?c_id=${encodeURIComponent(car_id)}&j_id=${encodeURIComponent(junction_id)}`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('car_enter_result').innerText = JSON.stringify(data);
-      });
-  }
-  function carLeave() {
-    const car_id = document.getElementById('car_leave_id_create').value;
-    const junction_id = document.getElementById('junction_left_towards_id_create').value;
-    const url = `/cars/car_leave/?c_id=${encodeURIComponent(car_id)}&j_id=${encodeURIComponent(junction_id)}`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('car_leave_result').innerText = JSON.stringify(data);
-      });
-  }
+  const car_id = document.getElementById('car_enter_id_create').value;
+  const junction_id = document.getElementById('junction_enter_id_create').value;
+  fetch(`/cars/car_enter/?c_id=${car_id}&j_id=${junction_id}`)
+    .then(res => res.json())
+    .then(data => {
+      if(data.messages) {
+        data.messages.forEach(msg => appendAlert(msg));
+      }
+      document.getElementById('car_enter_result').innerText = 
+        JSON.stringify(data, null, 2);
+    })
+    .catch(error => {
+      appendAlert(`Entry Error: ${error.message}`, true);
+    });
+}
+
+function carLeave() {
+  const car_id = document.getElementById('car_leave_id_create').value;
+  const junction_id = document.getElementById('junction_left_towards_id_create').value;
+  fetch(`/cars/car_leave/?c_id=${car_id}&j_id=${junction_id}`)
+    .then(res => res.json())
+    .then(data => {
+      if(data.messages) {
+        data.messages.forEach(msg => appendAlert(msg));
+      }
+      document.getElementById('car_leave_result').innerText = 
+        JSON.stringify(data, null, 2);
+    })
+    .catch(error => {
+      appendAlert(`Exit Error: ${error.message}`, true);
+    });
+}
   function junctionLogs() {
     const junction_id = document.getElementById('junction_logs_id_create').value;
     const url = `/cars/junction_logs/?j_id=${encodeURIComponent(junction_id)}`;
