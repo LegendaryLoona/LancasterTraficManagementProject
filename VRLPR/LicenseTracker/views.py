@@ -132,6 +132,38 @@ def car_enter_junction(request):
         emergency_cars_in_junction = junction.cars.filter(important=True).exclude(id=car.id)
         for emergency_car in emergency_cars_in_junction:
             response_messages.extend(_send_emergency_alert(emergency_car, car))
+        alert_message = None
+        upstream_junctions = junction.can_drive_to.all()
+        emergency_nodes = []
+        clear_nodes = []
+        for up_junc in upstream_junctions:
+            emergency_in_junction = up_junc.cars.filter(important=True).exists()
+            emergency_coming_to_junction = JunctionLog.objects.filter(
+                left_towards=up_junc,
+                car__important=True,
+                exit_time__isnull=False  
+            ).exists()
+            if emergency_in_junction or emergency_coming_to_junction:
+                emergency_nodes.append(up_junc.address)
+            else:
+                clear_nodes.append(up_junc.address)
+        if emergency_nodes:
+            alert_message = (
+                f"Emergency Alert!\n\n"
+                f"You are approaching {junction.address}, but there are emergency vehicles in "
+                f"the following connected junction(s): {', '.join(emergency_nodes)}.\n"
+                f"Please proceed with caution or consider these alternative routes: "
+                f"{', '.join(clear_nodes) if clear_nodes else 'No other clear junctions'}.\n"
+            )
+        if car.owner and car.owner.email and alert_message:
+                    send_mail(
+                        subject="Upstream Junction Emergency Alert",
+                        message=alert_message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[car.owner.email],
+                        fail_silently=True, 
+                    )
+                    response_messages.append(f"Email sent to {car.owner.email}.")
         return JsonResponse({
             "status": "success",
             "messages": response_messages,
