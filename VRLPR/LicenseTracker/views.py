@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import io
 import urllib, base64
 
-ef activate_emergency_signals(request):
+def activate_emergency_signals(request):
     try:
         with transaction.atomic():
             Junktion.objects.update(signals="Normal")
@@ -133,7 +133,7 @@ def car_enter_junction(request):
         for emergency_car in emergency_cars_in_junction:
             response_messages.extend(_send_emergency_alert(emergency_car, car))
         alert_message = None
-        upstream_junctions = junction.can_drive_to.all()
+        upstream_junctions = junction.can_be_left_towards.all()
         emergency_nodes = []
         clear_nodes = []
         for up_junc in upstream_junctions:
@@ -378,18 +378,18 @@ def show_exits(request):
 
 def connect_junctions(request):
     junction_id = request.GET.get('j_id')
-    drive_to = request.GET.get('ent_from', '')
+    entered_from_ids = request.GET.get('ent_from', '')
     try:
         junction = Junktion.objects.get(id=junction_id)
-        drive_to = [int(j_id) for j_id in drive_to.split(',')]
-        for j_id in drive_to:
-            junction.can_drive_to.add(Junktion.objects.get(id=j_id))
+        entered_from_ids = [int(j_id) for j_id in entered_from_ids.split(',')]
+        for j_id in entered_from_ids:
+            junction.can_be_entered_from.add(Junktion.objects.get(id=j_id))
         junction.save()
     except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
     data = []
-    for junction in junction.can_drive_to.all():
+    for junction in junction.can_be_entered_from.all():
         data.append(junction.id)
-    return JsonResponse(f"Can drive to {data}", safe=False)
+    return JsonResponse(f"Can be entered from {data}", safe=False)
 
 
 
