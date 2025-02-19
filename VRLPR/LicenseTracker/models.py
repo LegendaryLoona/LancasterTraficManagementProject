@@ -24,6 +24,7 @@ class License(models.Model):
 class Junktion(models.Model):
     address = models.CharField(max_length=50, unique=True)
     max_traffic = models.IntegerField(blank=True, null=True, default=None)  
+    signals = models.CharField(max_length=50,default="Normal",  help_text="Traffic signal status, Normal or Emergency.")
     can_drive_to = models.ManyToManyField(
         "self",
         symmetrical=False,
