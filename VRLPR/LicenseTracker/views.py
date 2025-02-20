@@ -14,6 +14,8 @@ from django.conf import settings
 import matplotlib.pyplot as plt
 import io
 import urllib, base64
+from django.views.decorators.csrf import csrf_exempt
+
 
 def activate_emergency_signals(request):
     try:
@@ -133,7 +135,7 @@ def car_enter_junction(request):
         for emergency_car in emergency_cars_in_junction:
             response_messages.extend(_send_emergency_alert(emergency_car, car))
         alert_message = None
-        upstream_junctions = junction.can_be_left_towards.all()
+        upstream_junctions = junction.can_drive_to.all()
         emergency_nodes = []
         clear_nodes = []
         for up_junc in upstream_junctions:
@@ -213,27 +215,13 @@ def car_leave_junction(request):
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, safe=False)
-# def change_emergency_status(request, car_id):
-#     try:
-#         car = Car.objects.get(id=car_id)
-#         with transaction.atomic(): 
-#             if car.important == True:
-#                 car.important = False
-#                 car.save()  
-#                 return JsonResponse(f"Removed important status from Car {car.id} ", safe=False)
-#             else:
-#                 car.important = True
-#                 car.save()
-#                 return JsonResponse(f"Marked Car {car.id} as important", safe=False)
-#     except Exception as e:
-#         return JsonResponse(f"Got an error: {e}", safe=False)
 
 def send_congestion_alert(request, junction_id):
     try:
         junction = Junktion.objects.get(id=junction_id)
         end_time = datetime.now()
         start_time = end_time - timedelta(hours=1)
-        upstream_junctions = junction.can_be_entered_from.all()
+        upstream_junctions = junction.can_drive_to.all()
         congested_nodes = []
         clear_nodes = []
 
@@ -267,8 +255,6 @@ def send_congestion_alert(request, junction_id):
                     f"has congested upstream junctions: {', '.join(congested_nodes)}.\n"
                     ),
 })
-
-
         else:
             return JsonResponse({
                 'status': 'clear',
@@ -286,7 +272,6 @@ def congestion_prediction(request):
         start_time = end_time - timedelta(hours=1)
         junctions = Junktion.objects.all()
         predictions = []
-
         for junction in junctions:
             traffic_flow = JunctionLog.objects.filter(
                 junction=junction,
@@ -310,9 +295,9 @@ def congestion_prediction(request):
             'status': 'success',
             'predictions': predictions
         }, safe=False)
-
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
 def traffic_flow_analysis(request, junction_id):
     try:
         junction = Junktion.objects.get(id=junction_id)
@@ -382,20 +367,18 @@ def show_exits(request):
 
 def connect_junctions(request):
     junction_id = request.GET.get('j_id')
-    entered_from_ids = request.GET.get('ent_from', '')
+    drive_to = request.GET.get('ent_from', '')
     try:
         junction = Junktion.objects.get(id=junction_id)
-        entered_from_ids = [int(j_id) for j_id in entered_from_ids.split(',')]
-        for j_id in entered_from_ids:
-            junction.can_be_entered_from.add(Junktion.objects.get(id=j_id))
+        drive_to = [int(j_id) for j_id in drive_to.split(',')]
+        for j_id in drive_to:
+            junction.can_drive_to.add(Junktion.objects.get(id=j_id))
         junction.save()
     except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
     data = []
-    for junction in junction.can_be_entered_from.all():
+    for junction in junction.can_drive_to.all():
         data.append(junction.id)
-    return JsonResponse(f"Can be entered from {data}", safe=False)
-
-
+    return JsonResponse(f"Can drive to {data}", safe=False)
 
 def junction_logs(request):
     junction_id = request.GET.get('j_id')
@@ -412,71 +395,6 @@ def junction_logs(request):
     except Exception as e: return JsonResponse(f"Got an error: {e}", safe=False)
     return JsonResponse(output_logs, safe=False)
 
-# def car_enter_junction(request):
-#     car_id = request.GET.get('c_id')
-#     junction_id = request.GET.get('j_id')
-#     try:
-#         car = Car.objects.get(id=car_id) 
-#         junction = Junktion.objects.get(id=junction_id) 
-#     except Exception as e:
-#         return JsonResponse(f"Got an error: {e}", safe=False)
-#     try:
-#         if car.junction != None: return JsonResponse(f"Car is already in Junction {car.junction.id}!", safe=False)
-#         with transaction.atomic():
-#             car.junction = junction
-#             car.save()
-#             log = JunctionLog.objects.create(
-#                 car = car,
-#                 junction=junction,
-#                 entry_time = datetime.now()
-#             )
-#         if car.important == True:
-#             cars = junction.get_cars()
-#             emails = []
-#             for i in cars:
-#                 email = i.owner.email
-#                 emails.append(email)
-#             subject = "Attention!"
-#             message = (
-#                 f"Dear driver,\n\n"
-#                 f"There is an emergency vehicle near you.\n\n"
-#                 f"Please make way for it.\n\n"
-#                 f"Best Regards,\nTraffic Management Authority"
-#             )
-
-#             send_mail(
-#                 subject,
-#                 message,
-#                 settings.DEFAULT_FROM_EMAIL,  
-#                 recipient_list=emails,  
-#                 fail_silently=False,
-#             )
-#             return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}, All emails sent", safe=False)
-#     except Exception as e:
-#         return JsonResponse(f"Got an error: {e}", safe=False)
-#     return JsonResponse(f"Log generated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
-
-# def car_leave_junction(request):
-#     car_id = request.GET.get('c_id')
-#     junction_id = request.GET.get('j_id')
-#     try:
-#         car = Car.objects.get(id=car_id) 
-#         junction = Junktion.objects.get(id=junction_id) 
-#         log = JunctionLog.objects.get(car = car, junction = car.junction, exit_time__isnull=True)
-#     except Exception as e:
-#         return JsonResponse(f"Got an error: {e}", safe=False)
-#     try:
-#         with transaction.atomic():
-#             car.junction = None
-#             log.left_towards = junction
-#             log.exit_time = datetime.now()
-#             car.save()
-#             log.save()
-#     except Exception as e:
-#         return JsonResponse(f"Got an error: {e}", safe=False)
-#     return JsonResponse(f"Log updated {log.id}, {log.car.id}, {log.junction.id}, {log.entry_time}, {log.exit_time}", safe=False)
-
-@login_required
 def make_fine(request):
     if not request.user.is_superuser:
         return JsonResponse("You do not have permission to do this.", safe=False)
@@ -507,15 +425,13 @@ def make_fine(request):
             f"Please pay the fine at your earliest convenience.\n\n"
             f"Best Regards,\nTraffic Management Authority"
         )
-
-        # send_mail(
-        #     subject,
-        #     message,
-        #     settings.DEFAULT_FROM_EMAIL,  
-        #     [email],  
-        #     fail_silently=False,
-        # )
-
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,  
+            [email],  
+            fail_silently=False,
+        )
         return JsonResponse(
             f"Fine generated {fine.id}, {fine.person.name}, {fine.description}, {fine.fine_amount}, {fine.fine_date}, {fine.fine_location}", safe=False)
         # return JsonResponse(email, safe=False)
@@ -1174,3 +1090,6 @@ def all_cars(request):
         })
     
     return JsonResponse(data, safe=False)
+
+
+
