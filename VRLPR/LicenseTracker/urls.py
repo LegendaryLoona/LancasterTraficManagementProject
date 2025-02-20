@@ -43,4 +43,5 @@ urlpatterns = [
     path('change_important_status/<int:car_id>/', views.change_emergency_status, name='change_emergency_status'),
     path('activate_emergency_signals/', views.activate_emergency_signals, name='activate_emergency_signals'),
     path('restore_normal_signals/', views.restore_normal_signals, name='restore_normal_signals'),
+
 ]
