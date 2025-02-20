@@ -1167,6 +1167,8 @@ def all_cars(request):
             "manufacturer": car.manufacturer,
             "model": car.model,
             "color": car.color,
+            "location":car.location,
+            "email":car.owner.email,
             "owner_id": car.owner.id if car.owner else None,
             "owner_name": car.owner.name if car.owner else None,
             "junction_id": car.junction.id if car.junction else None,
