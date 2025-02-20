@@ -397,8 +397,7 @@ function changeimportantStatus() {
     .then(data => {
       const message = data.error ? `Error: ${data.error}` : data.message;
       appendAlert(message, !!data.error);
-      document.getElementById('car_important_result').innerText = 
-        JSON.stringify(data, null, 2);
+      document.getElementById('car_important_result').innerText = JSON.stringify(data, null, 2);
     })
     .catch(error => {
       appendAlert(`Network Error: ${error.message}`, true);
