@@ -35,4 +35,4 @@ This repository contains a Django-based application designed as a project for La
 
 ### Sequence UMLs
 
-![All of the diagrams (draw.io)](https://app.diagrams.net/#G1AxWo89ccFKJ6HcFhXWO2F0h_ZvS-xg-v#%7B"pageId"%3A"pz4HMEyCPNZR9tuViDBD"%7D)
+[All of the diagrams (draw.io)](https://app.diagrams.net/#G1AxWo89ccFKJ6HcFhXWO2F0h_ZvS-xg-v#%7B"pageId"%3A"pz4HMEyCPNZR9tuViDBD"%7D)
