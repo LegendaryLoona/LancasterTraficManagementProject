@@ -27,7 +27,7 @@ This repository contains a Django-based application designed as a project for La
 
 ### Use Case UML
 
-![](https://github.com/LegendaryLoona/LancasterVRLPR/blob/main/UMLs/UseCaseUML.png)
+![](https://github.com/LegendaryLoona/LancasterVRLPR/blob/main/UMLs/UseCaseUml.png)
 
 ### Class UML
 
